@@ -1,0 +1,82 @@
+name: Release
+
+# Declenchement par un tag de version : git tag v1.1.0 && git push --tags
+# Produit l'archive portable et l'attache a la release GitHub.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version a construire (ex. 1.1.0)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # On ne publie pas une archive dont les tests echouent.
+      - name: Chargement complet
+        run: node server.js --selftest
+
+      - name: Tests
+        run: npm test
+
+      - name: Construction de l'archive portable
+        shell: pwsh
+        run: |
+          $v = '${{ github.ref_name }}' -replace '^v', ''
+          if (-not $v) { $v = '${{ github.event.inputs.version }}' }
+          if ($v) { ./scripts/build-release.ps1 -Version $v } else { ./scripts/build-release.ps1 }
+
+      # Verification que l'archive produite fonctionne REELLEMENT une fois
+      # extraite : une archive qui se construit n'est pas une archive qui marche.
+      # C'est ce test qui a revele un test dependant de l'environnement, vert dans
+      # le depot et rouge dans l'archive.
+      - name: L'archive extraite doit fonctionner
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem dist\*.zip | Select-Object -First 1
+          $tmp = Join-Path $env:TEMP 'relcheck'
+          if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+          Expand-Archive -Path $zip.FullName -DestinationPath $tmp
+          $app = Get-ChildItem $tmp -Directory | Select-Object -First 1
+          Push-Location $app.FullName
+          node server.js --selftest
+          if ($LASTEXITCODE -ne 0) { throw "l'archive extraite ne se charge pas" }
+          node test/run.js
+          if ($LASTEXITCODE -ne 0) { throw "les tests echouent depuis l'archive extraite" }
+          Pop-Location
+
+      - name: Publication
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
+          draft: true
+          body: |
+            ## Installation
+
+            1. Télécharger et extraire l'archive ci-dessous.
+            2. Installer [Node.js](https://nodejs.org) >= 18 si ce n'est pas déjà fait.
+            3. Dans le dossier extrait :
+               ```
+               npm run doctor    # indique exactement ce qui manque
+               npm start         # puis http://localhost:4360
+               ```
+
+            Les outils externes (7-Zip, iso2god, exiso, xextool) ne sont pas
+            embarqués : `npm run doctor` les détecte et dit lesquels sont absents.
+            L'application démarre sans eux, seules les actions correspondantes
+            disparaissent.
+
+            Voir le [CHANGELOG](CHANGELOG.md) pour le détail des modifications.

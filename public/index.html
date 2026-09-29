@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Xbox 360 Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><g fill='none' stroke='%237fc02e' stroke-width='5'><path d='M35 5 A27 27 0 0 1 59 29'/><path d='M59 35 A27 27 0 0 1 35 59'/><path d='M29 59 A27 27 0 0 1 5 35'/><path d='M5 29 A27 27 0 0 1 29 5'/></g><circle cx='32' cy='32' r='21' fill='%23edf0e7'/><path d='M19 18 Q25 18 32 24 Q39 18 45 18 Q39 24 36 29 Q44 39 46 46 Q37 39 32 34 Q27 39 18 46 Q20 39 28 29 Q25 24 19 18' fill='%234b8518'/></svg>">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<!-- Jeu d'icones. Trace unique, 24x24, currentColor : une icone prend toujours
+     la couleur de son contexte, et un seul endroit suffit a les modifier. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="i-set" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></g>
+    <radialGradient id="xg-silver" cx="35%" cy="22%" r="90%"><stop offset="0%" stop-color="#ffffff"/><stop offset="45%" stop-color="#eeeeea"/><stop offset="80%" stop-color="#c9cdc5"/><stop offset="100%" stop-color="#afb5aa"/></radialGradient>
+  </defs>
+  <symbol id="x-logo" viewBox="0 0 64 64"><g fill="none" stroke="#7fc02e" stroke-width="4"><path d="M35 5 A27 27 0 0 1 59 29"/><path d="M59 35 A27 27 0 0 1 35 59"/><path d="M29 59 A27 27 0 0 1 5 35"/><path d="M5 29 A27 27 0 0 1 29 5"/></g><circle cx="32" cy="32" r="21" fill="url(#xg-silver)" stroke="#ffffff80" stroke-width=".5"/><path d="M19 18 Q25 18 32 24 Q39 18 45 18 Q39 24 36 29 Q44 39 46 46 Q37 39 32 34 Q27 39 18 46 Q20 39 28 29 Q25 24 19 18" fill="#4b8518"/></symbol>
+  <symbol id="x-core" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="url(#xg-silver)" stroke="#ffffff80" stroke-width=".8"/><path d="M14 14 Q24 15 32 23 Q40 15 50 14 Q44 23 39 29 Q48 40 52 49 Q40 42 32 36 Q24 42 12 49 Q16 40 25 29 Q20 23 14 14" fill="#4b8518"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/></symbol>
+  <symbol id="i-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h4v15H4z"/><path d="M10 4.5h4v15h-4z"/><path d="M17.2 6.2l3.4.9-3 12.4-3.4-.9z"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 20 7v10l-8 4-8-4V7z"/><path d="M4 7l8 4 8-4"/><path d="M12 21V11"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8 20 20"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 19h14"/></symbol>
+  <symbol id="i-script" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13l2 2-2 2"/><path d="M13 17h3"/></symbol>
+<symbol id="i-update" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5V9H15"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 3.5 8l8.5 4.5L20.5 8 12 3.5z"/><path d="M3.5 13 12 17.5 20.5 13"/></symbol>
+  <symbol id="i-vault" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="5.5" width="15" height="13" rx="1.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 14.5V17"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9 12 4l8.5 5"/><path d="M5.5 9v8"/><path d="M9.5 9v8"/><path d="M14.5 9v8"/><path d="M18.5 9v8"/><path d="M3 18.5h18"/></symbol>
+  <symbol id="i-plus-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="5.5" width="15" height="13" rx="1.5"/><path d="M12 9.5v5"/><path d="M9.5 12h5"/></symbol>
+  <symbol id="i-disc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-drive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="9" rx="1.5"/><path d="M7 12h1.5"/><path d="M11 12h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></symbol><symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5L21.5 20h-19z"/><path d="M12 10v4"/><path d="M12 17h.01"/></symbol><symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6.5 6.5l11 11"/><path d="M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-console" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="11" rx="2"/><path d="M8.5 20.5h7"/><path d="M12 17v3.5"/><path d="M7.5 10h2.5"/><path d="M7.5 13h6"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1"/><path d="M14 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-.6 4"/><path d="M20 4.5V11h-6"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12a7 7 0 0 0 .1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6A7 7 0 0 0 19 12z"/></symbol>
+</svg>
+<div id="appbg"></div>
+<header id="topbar">
+  <div class="tb-top">
+  <div class="brand"><svg class="xlogo" viewBox="0 0 64 64"><use href="#x-logo"/></svg><span class="bn">XBOX <b>360</b></span><span class="bs">LIBRARY MANAGER</span></div>
+  <div class="tb-right">
+    <select id="drive" onchange="loadDrives()"></select>
+    <div class="tb-disk">
+      <span class="tbfree" id="free"></span>
+      <div class="tb-gauge" title=""><div id="freeBar"></div></div>
+    </div>
+    <div class="langwrap" id="langWrap">
+      <button class="btn gray" id="langBtn" aria-haspopup="true" aria-expanded="false" onclick="basculeLang()" title="Français · English · Español · Português">🌐 FR</button>
+      <div class="langmenu" id="langMenu" role="menu">
+        <button role="menuitem" data-l="fr" onclick="setLang('fr')">🇫🇷 Français</button>
+        <button role="menuitem" data-l="en" onclick="setLang('en')">🇬🇧 English</button>
+        <button role="menuitem" data-l="es" onclick="setLang('es')">🇪🇸 Español</button>
+        <button role="menuitem" data-l="pt" onclick="setLang('pt')">🇵🇹 Português</button>
+      </div>
+    </div>
+  </div>
+  </div>
+</header>
+<!-- LE RAIL DES BLADES. La signature NXE : une colonne de lames a gauche, la
+     lame active etant la plaque claire glossy qui depasse vers le contenu.
+     En tete, l'orbe du bouton d'alimentation : la sphere X entouree de
+     l'anneau lumineux en quatre segments, dont la couleur dit l'etat de la
+     console (vert = reliee). `.tb-tabs` et `.ttab` gardent leurs noms : toute
+     la mesure de la bande horizontale continue de s'appliquer quand le rail
+     se replie en bande sous la barre (fenetres etroites, telephone). -->
+<nav id="blades">
+  <div class="bl-head">
+    <!-- L'orbe est un bouton : elle dit l'etat de la console ET mene a la vue
+         Console (spec 002, US4). L'anneau coloré fait le reste. -->
+    <div class="bl-orb" id="orb" role="button" tabindex="0" onclick="showView('con')" onkeydown="if(event.key==='Enter'||event.key===' ')showView('con')" title="État de la console — ouvrir la vue Console">
+      <svg class="rolring" viewBox="0 0 88 88" aria-hidden="true">
+        <path class="rol-seg" d="M62.5 11.96 A37 37 0 0 1 76.04 25.5"/>
+        <path class="rol-seg" d="M76.04 62.5 A37 37 0 0 1 62.5 76.04"/>
+        <path class="rol-seg" d="M25.5 76.04 A37 37 0 0 1 11.96 62.5"/>
+        <path class="rol-seg" d="M11.96 25.5 A37 37 0 0 1 25.5 11.96"/>
+      </svg>
+      <svg class="xlogo" viewBox="0 0 64 64" aria-hidden="true"><use href="#x-core"/></svg>
+    </div>
+    <div class="bl-word">XBOX <b>360</b></div>
+    <div class="bl-state" id="rolState"></div>
+  </div>
+  <div class="tb-tabs">
+    <button id="nv-dash" class="ttab active" onclick="showView('dash',this)"><span class="ni"><svg><use href="#i-home"/></svg></span><span class="txt">Accueil</span></button>
+    <button id="nv-lib" class="ttab" onclick="showView('lib',this)"><span class="ni"><svg><use href="#i-library"/></svg></span><span class="txt">Jeux</span></button>
+    <button id="nv-con" class="ttab" onclick="showView('con',this)"><span class="ni"><svg><use href="#i-console"/></svg></span><span class="txt">Console</span><span class="nvdot" id="nvConDot" hidden></span></button>
+    <button id="nv-sto" class="ttab" onclick="showView('sto',this)"><span class="ni"><svg><use href="#i-drive"/></svg></span><span class="txt">Stockage</span></button>
+    <button id="nv-act" class="ttab" onclick="showView('act',this)"><span class="ni"><svg><use href="#i-download"/></svg></span><span class="txt">Activité</span><span class="nvbadge" id="nvActBadge" hidden></span></button>
+    <button id="nv-tools" class="ttab" onclick="showView('tools',this)"><span class="ni"><svg><use href="#i-gear"/></svg></span><span class="txt">Réglages</span></button>
+  </div>
+  <div class="bl-foot">
+    <button class="bl-assist" id="bl-asst" onclick="iaOuvrir()"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="currentColor"/></svg><span class="txt">Assistant</span></button>
+  </div>
+</nav>
+<div id="wrap">
+<div id="vtitle"><span id="vtName">ACCUEIL</span><span id="vtSub"></span><span id="vctx" class="vctx"></span></div>
+<main>
+  <!-- ACCUEIL -->
+  <div class="view active" id="v-dash">
+    <!-- LES JEUX D'ABORD : l'etagere de jaquettes ouvre la vue, les compteurs
+         et les diagnostics viennent apres. C'est le geste du dashboard :
+         ce qu'on vient chercher est une bibliotheque, pas un panneau d'alarmes. -->
+    <!-- LE HEROS : la bibliotheque est le decor, pas un compteur. Un jeu
+         choisi au hasard parmi ceux qui ont un TID — la jaquette fait la
+         moitie de l'ecran, comme sur Aurora. Libelle honnete : on ne mesure
+         pas la date d'ajout, on dit « Dans ta bibliotheque ». -->
+    <div class="hero" id="dashHero" hidden>
+      <div class="hero-in">
+        <div class="hero-cov"><img id="heroCov" alt=""></div>
+        <div class="hero-txt">
+          <div class="hero-eyebrow">Dans ta bibliothèque</div>
+          <h1 id="heroName"></h1>
+          <div class="hero-meta" id="heroMeta"></div>
+        </div>
+        <div class="hero-act" id="heroAct"></div>
+      </div>
+    </div>
+    <h2 class="sec" id="dashShelfSec" style="display:none">Dans ta bibliothèque</h2>
+    <div id="dashShelf"></div>
+    <div class="statgrid" id="dashStats"></div>
+    <div class="dashstrip" id="dashStrip"></div>
+    <h2 class="sec" id="dashAdvSec" style="display:none">Entretien <button class="btn quiet pad-s" id="dashAdvBtn" onclick="openEntretien()">DÉTAIL</button></h2>
+    <!-- LE SECOND CHEMIN VERS L'ASSISTANT. Le spec en exige DEUX, et un chemin
+         unique n'est pas conforme : celui du pied de page est toujours a l'ecran
+         mais discret, celui-ci est la ou l'on se pose la question — devant la
+         liste de ce qui ne va pas. Les deux appellent la MEME fonction. -->
+    <div id="iaBoutonDash"><button class="btn quiet" onclick="iaOuvrir()"><span>DEMANDER A L'ASSISTANT</span></button></div>
+    <div class="advgrid" id="dashAdv"></div>
+    <h2 class="sec">Dépôt</h2>
+    <div id="dashPending"></div>
+    <h2 class="sec">ACTIONS RAPIDES</h2>
+    <div class="quickgrid">
+      <button class="qbtn" onclick="go('lib');loadGames()"><span class="qi"><svg><use href="#i-library"/></svg></span><span class="qt">BIBLIOTHÈQUE</span><span class="qd">Voir, trier et lancer tes jeux installés</span></button>
+      <button class="qbtn" onclick="openOrganize()"><span class="qi"><svg><use href="#i-archive"/></svg></span><span class="qt">ORGANISER LE DÉPÔT</span><span class="qd">Ranger ce qui attend dans _A_TRIER</span></button>
+      <button class="qbtn" onclick="go('act')"><span class="qi"><svg><use href="#i-download"/></svg></span><span class="qt">TÉLÉCHARGER</span><span class="qd">Chercher un jeu, un DLC ou un XBLA</span></button>
+      <button class="qbtn" onclick="go('as')"><span class="qi"><svg><use href="#i-script"/></svg></span><span class="qt">SCRIPTS AURORA</span><span class="qd">Filtres, tris et utilitaires LUA</span></button>
+      <button class="qbtn" onclick="go('con')"><span class="qi"><svg><use href="#i-console"/></svg></span><span class="qt">CONSOLE</span><span class="qd">Envoyer et récupérer par FTP</span></button>
+      <button class="qbtn" onclick="go('cat')"><span class="qi"><svg><use href="#i-search"/></svg></span><span class="qt">CATALOGUE</span><span class="qd">Explorer la base de titres XboxUnity</span></button>
+    </div>
+  </div>
+  <!-- BIBLIOTHÈQUE -->
+  <div class="view" id="v-lib">
+    <div class="toolbar">
+      <button class="btn accent" onclick="loadGames()">SCANNER</button>
+      <div class="tb-tools">
+        <button class="btn quiet" onclick="scanFolder()">UN DOSSIER</button>
+        <button class="btn quiet" onclick="scanUsb()">USB</button>
+        <button class="btn quiet" id="dupBtn" onclick="toggleDup()">DOUBLONS</button>
+        <button class="btn quiet" onclick="checkHealth()">SANTÉ</button>
+        <button class="btn quiet" onclick="exportCsv()">CSV</button>
+        <button class="btn quiet" onclick="go('tools')">RÉGLAGES</button>
+        <button class="btn quiet" onclick="diaOuvrir()">DIAPORAMA</button>
+      </div>
+      <div class="tb-filters">
+        <input type="text" id="libFilter" placeholder="Filtrer..." oninput="renderGames()">
+        <select id="libSort" onchange="renderGames()">
+          <option value="name">Nom A→Z</option>
+          <option value="size">Taille ↓</option>
+          <option value="type">Type</option>
+        </select>
+        <button class="btn gray" id="viewBtn" onclick="toggleView()">GRILLE</button>
+      </div>
+      <span class="status" id="libStatus"></span>
+    </div>
+    <div class="grid" id="grid" style="display:none"></div>
+    <div id="chan"></div>
+    <div id="flowWrap" style="display:none"><div id="flowGhost"></div><div id="flow" onscroll="flowTilt()"></div><div id="flowName"></div></div>
+  </div>
+  <!-- HOMEBREW -->
+  <div class="view" id="v-hb">
+    <div id="hbEmu"></div>
+    <div id="hbLog"></div>
+    <div class="toolbar">
+      <button class="btn accent" onclick="loadHomebrew()">SCANNER</button>
+      <button class="btn quiet" onclick="loadHbStore()">CATALOGUE</button>
+      <button class="btn quiet" onclick="loadJournal()" title="Lire Aurora/Logs/Aurora.log par FTP">JOURNAL AURORA</button>
+      <input type="text" id="hbQ" placeholder="Autre homebrew..." style="width:170px" onkeydown="if(event.key==='Enter')loadHbStore(this.value)">
+      <button class="btn" onclick="loadHbStore($('hbQ').value)">CHERCHER</button>
+      <span class="status" id="hbStatus"></span>
+    </div>
+    <table class="tbl"><thead><tr><th>APPLICATION</th><th>TYPE</th><th>EXÉCUTABLE</th><th>EMPLACEMENT</th></tr></thead><tbody id="hbBody"></tbody></table>
+    <div id="hbStore" style="margin-top:14px"></div>
+  </div>
+  <!-- SCRIPTS AURORA -->
+  <div class="view" id="v-as">
+    <p class="lead" id="asLead">Aurora exécute des <b>scripts LUA</b> : filtres, tris, sous-titres et utilitaires. Cette liste vient des <b>dépôts officiels XboxUnity</b> — exactement la source que lit Aurora. Un script s'installe dans <code>Game:\User\Scripts\</code> sur la console.</p>
+    <div class="toolbar">
+      <input type="text" id="asQ" placeholder="Chercher un script..." style="width:220px" oninput="asFiltre()">
+      <div class="seg" id="asCat">
+        <button class="seg-i on" data-c="" onclick="asKind('',this)">TOUS</button>
+        <button class="seg-i" data-c="utility" onclick="asKind('utility',this)">UTILITAIRES</button>
+        <button class="seg-i" data-c="filters" onclick="asKind('filters',this)">FILTRES</button>
+        <button class="seg-i" data-c="sorts" onclick="asKind('sorts',this)">TRIS</button>
+        <button class="seg-i" data-c="subtitles" onclick="asKind('subtitles',this)">SOUS-TITRES</button>
+      </div>
+      <button class="btn quiet" onclick="loadScripts(true)">RAFRAÎCHIR</button>
+      <span class="status" id="asStatus"></span>
+    </div>
+    <div class="liblist" id="asList"></div>
+  </div>
+  <!-- CATALOGUE -->
+  <div class="view" id="v-cat">
+    <p class="lead" id="catLead">Base de titres <b>XboxUnity</b> — la même que celle d'Aurora. Cherche un jeu pour voir ses <b>DLC</b>, ses <b>Title Updates</b> et les fichiers téléchargeables. La pastille <b>INSTALLÉ</b> signale ce que tu possèdes déjà.</p>
+    <div class="toolbar">
+      <input type="text" id="catSearch" class="grow" placeholder="Nom du jeu ou TitleID (ex. 41560817)" oninput="loadCatalog()">
+      <div class="seg" role="tablist" aria-label="Type de titre">
+        <button class="seg-i on" data-k="" onclick="catFilter('',this)">Tous</button>
+        <button class="seg-i" data-k="GOD" onclick="catFilter('GOD',this)">Jeux</button>
+        <button class="seg-i" data-k="XBLA" onclick="catFilter('XBLA',this)">XBLA</button>
+        <button class="seg-i" data-k="INDIE" onclick="catFilter('INDIE',this)">Indie</button>
+      </div>
+      <select id="catSort" onchange="loadCatalog()" title="Ordre d'affichage">
+        <option value="name">Nom A→Z</option>
+        <option value="tid">TitleID</option>
+        <option value="kind">Type</option>
+      </select>
+      <span class="status" id="catStatus"></span>
+    </div>
+    <div class="tablewrap">
+      <table class="tbl"><thead><tr><th>Jeu</th><th>Type</th><th>TitleID</th><th class="c-act">Actions</th></tr></thead><tbody id="catBody"></tbody></table>
+    </div>
+    <!-- SOURCES TIERCES — le chemin qui manquait.
+         POURQUOI CETTE SECTION EXISTE : le registre de sources (`/api/sources`)
+         est en place depuis le debut et AUCUNE vue ne l'appelait (0 occurrence de
+         `api/sources` dans public/). Une source ajoutee etait donc joignable par
+         API et INVISIBLE ici. Ce qui manquait n'etait pas la source, c'etait ce
+         chemin — c'est exactement la ou le proprietaire cherche un jeu.
+         CE QU'ELLE DIT, ET QUI VIENT DE LA SOURCE : le nom vient de la source
+         elle-meme ; la date de l'index, le compte des releases et le type
+         (jeu/DLC) viennent de l'index que l'application a ecrit. Ce que la source
+         ne peut PAS garantir est ecrit noir sur blanc : le contenu des .rar n'est
+         pas verifie (100 % .rar, aucun nom en .iso), et le telechargement exige un
+         compte archive.org. -->
+    <h2 class="sec" id="catTiersH" hidden>SOURCES TIERCES</h2>
+    <div class="toolbar" id="catTiersBar" hidden>
+      <button class="btn quiet" onclick="tiersRafraichir()">RAFRAÎCHIR L'INDEX</button>
+      <span class="status" id="catTiersEtat"></span>
+    </div>
+    <div class="tablewrap" id="catTiersWrap" hidden><table class="tbl"><thead><tr><th>Jeu</th><th>Type</th><th>Région</th><th>Taille</th><th class="c-act">Action</th></tr></thead><tbody id="catTiersBody"></tbody></table></div>
+    <p class="srcnote" id="catTiersNote" hidden></p>
+  </div>
+  <!-- ACTIVITÉ : transferts console, téléchargements, dépôt, journal. Tout ce
+       qui « tourne » vit ici — la réponse à « qu'est-ce qui se passe ? » est
+       un seul endroit (spec 002). -->
+  <div class="view" id="v-act">
+    <!-- FILE CLAIRE (design retenu) : la recherche n'est plus le heros, la file
+         l'est. Une barre fine en haut, le depot en pastille, puis trois groupes
+         — EN COURS / EN ATTENTE / TERMINES — ou telechargements et transferts
+         console se melangent dans le meme ordre. -->
+    <p class="lead" id="dlLead">Cherche un jeu, un DLC ou un XBLA, puis choisis : <b>DÉPÔT</b> garde le fichier pour l'organiser plus tard, <b>INSTALLER</b> le range directement au bon endroit sur le disque.</p>
+    <div class="acttop">
+      <div class="store">
+        <div class="storebar">
+          <input type="text" id="dlSearch" class="grow" placeholder="Chercher un jeu, un DLC, un XBLA..." onkeydown="if(event.key==='Enter')searchDl()">
+          <button class="btn accent" onclick="searchDl()">CHERCHER</button>
+        </div>
+      </div>
+      <button class="depotpill" id="actDepotPill" onclick="openOrganize()" title="Dépôt — ce qui attend dans _A_TRIER">
+        <span class="dpl">DÉPÔT</span><b id="actDepotStat">…</b><span class="dpa">ORGANISER →</span>
+      </button>
+    </div>
+    <div class="srcrow">
+      <div class="seg" role="tablist" aria-label="Source de téléchargement">
+        <button class="seg-i on" data-src="all" onclick="pickSrc(this)"><svg><use href="#i-layers"/></svg>Toutes</button>
+        <button class="seg-i" data-src="vimm" onclick="pickSrc(this)"><svg><use href="#i-vault"/></svg>Vimm's Vault</button>
+        <button class="seg-i" data-src="vimmd" onclick="pickSrc(this)"><svg><use href="#i-vault"/></svg>Vimm digital (DLC, TU, XBLA)</button>
+        <button class="seg-i" data-src="ia" onclick="pickSrc(this)"><svg><use href="#i-archive"/></svg>Archive.org</button>
+        <button class="seg-i" data-src="dlc" onclick="pickSrc(this)"><svg><use href="#i-plus-box"/></svg>DLC / XBLA</button>
+      </div>
+      <span class="status" id="dlStatus"></span>
+    </div>
+    <div class="srcnote" id="dlSrcNote"></div>
+    <h2 class="sec" id="dlResH" hidden>RÉSULTATS</h2>
+    <div class="tablewrap" id="dlResWrap" hidden><table class="tbl"><thead><tr><th>Titre</th><th>Détail</th><th>Source</th></tr></thead><tbody id="dlResults"></tbody></table></div>
+    <h2 class="sec" id="dlFilesH" hidden>FICHIERS</h2>
+    <div class="tablewrap" id="dlFilesWrap" hidden><table class="tbl"><thead><tr><th>Fichier</th><th>Collection</th><th>Taille</th><th class="c-act">Action</th></tr></thead><tbody id="dlFiles"></tbody></table></div>
+    <!-- LA FILE : un seul flux, trois groupes. renderActFile() le remplit a
+         partir de dlData (telechargements) et conRaces (transferts FTP). -->
+    <div id="actFile"></div>
+    <details class="sec-fold">
+      <summary>Autres moyens d'ajouter un fichier</summary>
+      <div class="sec-b">
+        <div class="fieldrow"><span class="lbl">LIEN</span><input type="text" id="dlUrl" placeholder="URL directe d'un fichier (.iso, .7z, .zip...)"><button class="btn gray" onclick="downloadUrl()">TÉLÉCHARGER</button></div>
+        <div class="fieldrow"><span class="lbl">IMPORT</span><input type="text" id="impPath" placeholder="C:\chemin\vers\fichier ou dossier"><button class="btn gray" onclick="importPath()">IMPORTER</button></div>
+        <p class="srcnote">Un lien direct passe par la même file d'attente et bénéficie du même pipeline automatique qu'une recherche.</p>
+      </div>
+    </details>
+    <!-- Le journal reste visible : c'est le sillage de la vue, pas un detail
+         replie. -->
+    <h2 class="sec">Journal des opérations</h2>
+    <div class="log" id="sortLog"></div>
+  </div>
+  <!-- CONSOLE (FTP) -->
+  <div class="view" id="v-con">
+    <p class="lead" id="conLead">Relie l'application à ta console par FTP — Aurora, FSD et Dashlaunch en ont un. Parcours ses disques, envoie-lui un jeu, un DLC ou une jaquette, et récupère ce qu'elle a en plus. Rien n'est écrit sans que tu le demandes.</p>
+
+    <!-- POSTE DE PILOTAGE : la console telle qu'elle est. Le monitor est la
+         vue directe XBDM — canal independant du FTP, c'est ce qui reste utile
+         quand « XBDM vit, FTP mort » (lien partiel) ; l'idcard porte
+         l'identite et les lignes d'etat. Aucune donnee inventee : ni
+         temperature ni espace disque, que ni XBDM ni le FTP ne donnent. -->
+    <div class="cockpit" id="conCockpit" hidden>
+      <section class="conmonitor" id="conLive" hidden>
+        <img id="conLiveImg" alt="" hidden>
+        <div class="conlive-vide" id="conLiveVide">LIVE lance des captures en rafale — une à la fois, le rythme réel mesuré s'affiche en badge. Noir possible selon le mode vidéo de la console — limite XBDM connue.</div>
+        <div class="mlive"><i></i><span>VUE DIRECTE</span><span class="minfo" id="conLiveInfo"></span></div>
+        <div class="mcap">
+          <b id="conMTitre">—</b><span class="dim" id="conMSub"></span>
+          <span class="mact">
+            <button class="btn quiet" onclick="conLiveFs()">PLEIN ÉCRAN</button>
+            <button class="btn quiet" id="conBCapture" onclick="xbdmCapture()">CAPTURE</button>
+            <button class="btn accent" id="conLiveBtn" onclick="conLiveToggle()">▶ LIVE</button>
+          </span>
+        </div>
+      </section>
+      <div class="idcard" id="conBandeau">
+        <div class="who">
+          <span class="conorb" id="conOrb"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#x-core"/></svg></span>
+          <div class="who-t"><b id="conBNom">—</b><span class="sub" id="conBSub"></span></div>
+        </div>
+        <div class="cstat"><i class="csdot" id="csdFtp"></i><span class="cs-l">FTP</span><b id="csFtp">—</b></div>
+        <div class="cstat"><i class="csdot" id="csdXbdm"></i><span class="cs-l">XBDM</span><b id="csXbdm">—</b></div>
+        <div class="cstat"><i class="csdot" id="csdCt"></i><span class="cs-l">CONTENU</span><b id="csCt">—</b></div>
+        <div class="idact" id="conBActions">
+          <button class="btn quiet" id="conBReboot" onclick="xbdmReboot()">REDÉMARRER</button>
+          <button class="btn quiet" id="conBDeco" onclick="conBascule()">DÉCONNECTER</button>
+        </div>
+        <button class="btn accent" id="conBRetry" onclick="conRetry()" hidden>RÉESSAYER</button>
+      </div>
+    </div>
+
+    <details class="store con-creds" id="conCreds" open>
+      <summary id="conCredsSum">Connexion — adresse et identifiants</summary>
+      <div class="storebar">
+        <input type="text" id="conHost" class="grow" placeholder="Adresse de la console (ex. 192.168.1.34)">
+        <input type="text" id="conPort" placeholder="Port" style="width:76px">
+        <input type="text" id="conUser" placeholder="Utilisateur" style="width:118px">
+        <input type="password" id="conPass" placeholder="Mot de passe" style="width:130px">
+        <button class="btn accent" id="conBtn" onclick="conBascule()">CONNECTER</button>
+      </div>
+      <div class="srcrow">
+        <label class="checkline"><input type="checkbox" id="conSave" checked> <span>Retenir le mot de passe (dans <b>secrets.json</b>, jamais dans config.json)</span></label>
+        <label class="checkline"><input type="checkbox" id="conVerif" checked> <span>Vérifier chaque envoi par la <b>somme de contrôle</b> de la console</span></label>
+        <span class="status" id="conStatus"></span>
+      </div>
+      <div class="srcnote" id="conNote">Le serveur FTP de la console écoute sur le port 21, utilisateur et mot de passe <b>xboxftp</b> par défaut. Sur Aurora : <b>Paramètres → Serveur FTP</b>.</div>
+    </details>
+
+    <!-- LES PORTES : chaque tuile descend vers la section reelle — des
+         ancres, pas des doublons de fonction. -->
+    <div class="conzones" id="conZones" hidden>
+      <button class="czone" onclick="conZoneGo('files')"><svg><use href="#i-drive"/></svg><span class="cz-t">EXPLORER LES DISQUES</span><span class="cz-s">Hdd1 · Usb0 · Game…</span></button>
+      <button class="czone" onclick="conZoneGo('send')"><svg><use href="#i-up"/></svg><span class="cz-t">ENVOYER DU PC</span><span class="cz-s" id="czSend">jeu, DLC, jaquette…</span></button>
+      <button class="czone" onclick="xbdmReboot()"><svg><use href="#i-update"/></svg><span class="cz-t">REDÉMARRER</span><span class="cz-s">via XBDM</span></button>
+    </div>
+
+    <!-- CONTENU INSTALLE en apercu : les jeux les plus garnis defilent ;
+         la vraie liste (filtre, DLC en ligne, TU) reste dessous. -->
+    <section id="conCtHero" hidden>
+      <div class="chanhead"><span class="chbadge inst">CONTENU INSTALLÉ</span><span class="chcount" id="conCtHeroN"></span><button class="chall" onclick="conZoneGo('ct')">TOUT AFFICHER →</button></div>
+      <div class="chrow" id="conCtRow"></div>
+    </section>
+
+    <div id="conPanneaux" hidden>
+      <div class="conpane">
+        <section class="conbox">
+          <header class="conhead">
+            <span class="conpt"><svg><use href="#i-console"/></svg></span>
+            <button class="btn quiet" onclick="conMonter()" title="Dossier parent"><svg><use href="#i-up"/></svg></button>
+            <button class="btn quiet" onclick="conAller(conChemin)" title="Rafraîchir"><svg><use href="#i-refresh"/></svg></button>
+            <button class="btn quiet" onclick="conNouveauDossier()" title="Nouveau dossier sur la console">+</button>
+            <button class="btn quiet" onclick="conDestinations()" title="Où la console range ses fichiers">DESTINATIONS</button>
+            <span class="crumb" id="conCrumb"></span>
+          </header>
+          <div class="conlist" id="conListe"></div>
+        </section>
+        <section class="conbox">
+          <header class="conhead">
+            <span class="conpt"><svg><use href="#i-box"/></svg></span>
+            <span class="crumb" id="conPcTitre">Ce que je peux envoyer</span>
+            <button class="btn quiet" onclick="conComparer()" title="Comparer avec la console"><svg><use href="#i-link"/></svg></button>
+            <button class="btn quiet" onclick="conChargerPc()" title="Rafraîchir"><svg><use href="#i-refresh"/></svg></button>
+          </header>
+          <div class="conlist" id="conPc"></div>
+        </section>
+      </div>
+      <div id="conDest"></div>
+
+      <!-- CONTENU INSTALLÉ : les DLC & TU liés aux jeux de la console vivent
+           ici (ex-vue « DLC & TU », absorbée par la destination Console). -->
+      <section class="conbox" id="conCt">
+        <header class="conhead">
+          <span class="conpt"><svg><use href="#i-update"/></svg></span>
+          <span class="crumb">Contenu installé — DLC &amp; TU</span>
+          <input type="text" id="ctFilter" placeholder="Filtrer..." oninput="renderCt()" style="width:150px">
+          <button class="btn quiet" onclick="loadMyContent()" title="Actualiser"><svg><use href="#i-refresh"/></svg></button>
+          <span class="status" id="ctStatus"></span>
+        </header>
+        <div class="conlist" id="ctList"></div>
+      </section>
+    </div>
+  </div>
+  <!-- RÉGLAGES & OUTILS : dossiers, réseau, entretien — ce qui se règle une
+       fois vit ici, plus caché dans la bibliothèque (spec 002). -->
+  <!-- STOCKAGE : l'espace par disque, et ce qui le remplit — segments mesures
+       cote PC (jeux du scan, depot, dossiers configures), volumes XBDM cote
+       console. -->
+  <div class="view" id="v-sto">
+    <p class="lead">PC et console — l'espace, ce qu'il porte, ce que la console lira.</p>
+    <div class="stotot" id="stoTot"></div>
+    <div class="stoleg" id="stoLeg" hidden></div>
+    <h2 class="sec" id="stoPcSec">PC</h2>
+    <div id="stoPc"></div>
+    <div id="stoCon"></div>
+  </div>
+  <div class="view" id="v-tools">
+    <p class="lead">Tout ce qui se règle ou s'entretient : les dossiers de la bibliothèque, l'accès téléphone, l'assistant, et les portes vers le catalogue, les homebrews et les scripts.</p>
+    <h2 class="sec">Explorer</h2>
+    <div class="quickgrid quatre">
+      <button class="qbtn" onclick="go('cat')"><span class="qi"><svg><use href="#i-search"/></svg></span><span class="qt">CATALOGUE</span><span class="qd">La base de titres XboxUnity</span></button>
+      <button class="qbtn" onclick="go('hb')"><span class="qi"><svg><use href="#i-box"/></svg></span><span class="qt">HOMEBREWS</span><span class="qd">Applications et jeux amateurs</span></button>
+      <button class="qbtn" onclick="go('as')"><span class="qi"><svg><use href="#i-script"/></svg></span><span class="qt">SCRIPTS AURORA</span><span class="qd">Filtres, tris et utilitaires LUA</span></button>
+      <button class="qbtn" onclick="openEntretien()"><span class="qi"><svg><use href="#i-warn"/></svg></span><span class="qt">ENTRETIEN</span><span class="qd">Doublons, jaquettes manquantes, santé</span></button>
+    </div>
+    <!-- Reglages en cartes a lignes (« groupes plats ») : libelle et
+         pourquoi a gauche, le controle a droite, un filet entre les lignes. -->
+    <h2 class="sec">Dossiers</h2>
+    <div class="cfgcard" id="cfgPanel">
+      <div class="srl"><div class="lb"><b>DÉPÔT</b><span>Où attendent les fichiers</span></div><div class="ctl"><input type="text" id="cfgDrop" list="dlDrop"><datalist id="dlDrop"></datalist><button class="btn quiet pad-s" onclick="pickFolder('cfgDrop')" title="Parcourir">…</button></div></div>
+      <div class="srl"><div class="lb"><b>JEUX</b><span>La bibliothèque</span></div><div class="ctl"><input type="text" id="cfgGames" list="dlGames"><datalist id="dlGames"></datalist><button class="btn quiet pad-s" onclick="pickFolder('cfgGames')" title="Parcourir">…</button></div></div>
+      <div class="srl"><div class="lb"><b>GOD/DLC</b><span>Le Content de la console</span></div><div class="ctl"><input type="text" id="cfgContent" list="dlContent"><datalist id="dlContent"></datalist><button class="btn quiet pad-s" onclick="pickFolder('cfgContent')" title="Parcourir">…</button></div></div>
+      <div class="srl"><div class="lb"><b>HOMEBREW</b><span>Applications consoles</span></div><div class="ctl"><input type="text" id="cfgHb" list="dlHb"><datalist id="dlHb"></datalist><button class="btn quiet pad-s" onclick="pickFolder('cfgHb')" title="Parcourir">…</button></div></div>
+      <div class="srl"><div class="lb"><b>ÉMULATEURS</b><span>Rétro</span></div><div class="ctl"><input type="text" id="cfgEmu" list="dlEmu"><datalist id="dlEmu"></datalist><button class="btn quiet pad-s" onclick="pickFolder('cfgEmu')" title="Parcourir">…</button></div></div>
+      <div class="srl"><div class="lb"></div><div class="ctl"><button class="btn accent" onclick="saveCfg()">SAUVER</button><span class="status" id="cfgStatus"></span></div></div>
+    </div>
+    <h2 class="sec">Archive.org</h2>
+    <div class="cfgcard">
+      <div class="srl"><div class="lb"><b>COOKIE DE COMPTE</b><span>Requis pour les packs DLC/XBLA restreints</span></div><div class="ctl"><input type="text" id="cfgCookie"><button class="btn quiet pad-s" onclick="cookieHelp()" title="Où trouver le cookie">?</button></div></div>
+    </div>
+    <h2 class="sec">Assistant local</h2>
+    <div class="cfgcard">
+      <!-- L'ASSISTANT. Le moteur est LOCAL : il n'y a donc AUCUN secret a saisir,
+           et pas de mot de passe ici (contrairement au cookie archive.org, qui vit
+           dans secrets.json). L'HOTE N'EST PAS REGLABLE ET N'APPARAIT PAS : il est
+           fige a 127.0.0.1 dans lib/ollama.js, et un champ « hote » serait la porte
+           par laquelle l'etat de la machine sortirait du PC.
+           Le modele et la porte s'enregistrent au `change`, comme la case du
+           diaporama : ce sont trois reglages a eux seuls, pas un formulaire. -->
+      <div class="srl"><div class="lb"><b id="iaRegLbl">ASSISTANT</b><span id="iaActifLbl">Actif</span></div><div class="ctl"><label class="sw" title="Moteur local — rien ne sort du PC"><input type="checkbox" id="iaActif" onchange="iaReglages()"><span class="tr"><i></i></span></label><input type="text" id="iaModele" placeholder="gemma4:12b-it-q4_K_M" onchange="iaReglages()"><input type="text" id="iaPort" class="cfgnum" value="11434" onchange="iaReglages()"><span class="status" id="iaReglagesEtat"></span></div></div>
+    </div>
+    <h2 class="sec">Accès téléphone</h2>
+    <div class="cfgcard">
+      <div class="srl"><div class="lb"><b>SERVEUR RÉSEAU</b><span>Ouvre l'app depuis le téléphone</span></div><div class="ctl"><span id="netEtat" class="badge wait"></span><button class="btn quiet pad-s" id="netBtn" onclick="basculeReseau()">ACTIVER</button><span class="dim cap" id="netNote"></span></div></div>
+      <div class="srl"><div class="lb"><b>CODE D'APPAIRAGE</b><span>Demandé à la première connexion</span></div><div class="ctl"><b id="netCode" class="code-appair">— — — — — —</b><button class="btn quiet pad-s" onclick="regenCode()">RÉGÉNÉRER</button></div></div>
+      <div class="srl"><div class="lb"><b>ADRESSE</b><span>À taper dans le navigateur du téléphone</span></div><div class="ctl"><span id="netUrl" class="mono acc"></span></div></div>
+      <div class="srl"><div class="lb"></div><div class="ctl"><span class="dim cap" id="netAvert"></span></div></div>
+    </div>
+    <h2 class="sec">Divers</h2>
+    <div class="cfgcard">
+      <div class="srl"><div class="lb"><b>DIAPORAMA AUTOMATIQUE</b><span>Lance le diaporama après 5 minutes sans activité</span></div><div class="ctl"><label class="sw" title="Lance le diaporama après 5 minutes sans activité"><input type="checkbox" id="cfgDia" onchange="diaReglageAuto()"><span class="tr"><i></i></span></label></div></div>
+      <div class="srl"><div class="lb"><b>PAPIER PEINT EN FOND</b><span>Affiche ton papier peint Windows en fond flouté</span></div><div class="ctl"><label class="sw" title="Affiche ton papier peint Windows en fond flouté"><input type="checkbox" id="cfgWall" onchange="wallReglage()"><span class="tr"><i></i></span></label></div></div>
+      <!-- LE DEMARRAGE AUTOMATIQUE N'EXISTE QUE DANS LA COQUILLE WPF.
+           Une page web n'ecrit pas dans le registre de l'utilisateur : dans un
+           navigateur, la case serait un mensonge (elle ne ferait rien). Elle est
+           donc masquee, et une note dit POURQUOI — c'est la meme regle que le
+           reste du depot : ce qu'on ne peut pas faire, on le dit. -->
+      <div class="srl" id="autostart"><div class="lb"><b><span id="autoLbl">Démarrer avec Windows</span></b><span class="srcnote" id="autoNav">Le démarrage automatique se règle dans l'application Windows, pas dans le navigateur.</span></div><div class="ctl"><label class="sw" title="Lance l'application au démarrage de Windows, sans montrer la fenêtre"><input type="checkbox" id="cfgAuto" onchange="autoReglage()"><span class="tr"><i></i></span></label><span class="status" id="autoEtat"></span></div></div>
+    </div>
+  </div>
+</main>
+</div>
+<div id="orgModal" class="ovl">
+  <div class="panel">
+    <div class="ov-head">
+      <b>ORGANISER LE DÉPÔT</b>
+      <button class="btn gray pad-s" onclick="fermerSurcouche($('orgModal'))"><svg class="ic13"><use href="#i-close"/></svg></button>
+    </div>
+    <!-- La recherche LIMITE ce qui sera traite : les lignes cachees ne sont pas
+         traitees. La regle est ecrite, pas devinee. -->
+    <div class="org-tools">
+      <input type="text" id="orgFilter" placeholder="Filtrer le dépôt (nom, type, jeu)…" oninput="orgFiltre()">
+      <select id="orgBatch" class="org-batch" onchange="orgBatch(this.value);this.value=''"><option value="" selected>APPLIQUER AUX SÉLECTIONNÉS…</option></select>
+      <span class="dim cap" id="orgScope"></span>
+    </div>
+    <div class="ov-body" id="orgTable"><table class="tbl"><thead><tr><th>✓</th><th>ÉLÉMENT</th><th>TYPE</th><th>JEU / TITLEID</th><th>TAILLE</th><th>ACTION</th></tr></thead><tbody id="orgBody"></tbody></table></div>
+    <div class="ov-body" id="orgPrev" style="display:none"></div>
+    <div class="ov-foot">
+      <span id="orgInfo"></span>
+      <button class="btn gray pad-s" id="orgAll" onclick="orgTout(true)">TOUS</button>
+      <button class="btn gray pad-s" id="orgNone" onclick="orgTout(false)">AUCUN</button>
+      <button class="btn gray pad-s" id="orgBack" style="display:none" onclick="orgRetour()">← RETOUR</button>
+      <button class="btn orange" id="orgConfirm" onclick="execOrganize()">CONFIRMER L'ORGANISATION</button>
+    </div>
+  </div>
+</div>
+<div id="entModal" class="ovl">
+  <div class="panel">
+    <div class="ov-head">
+      <b>ENTRETIEN — DÉTAIL</b>
+      <button class="btn gray pad-s" onclick="fermerSurcouche($('entModal'))"><svg class="ic13"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="org-tools">
+      <input type="text" id="entFilter" placeholder="Filtrer les diagnostics (jeu, fichier)…" oninput="entFiltre()">
+      <div class="seg" id="entSeg">
+        <button class="seg-i on" data-s="" onclick="entSev('',this)">TOUS</button>
+        <button class="seg-i" data-s="err" onclick="entSev('err',this)">ERREURS</button>
+        <button class="seg-i" data-s="warn" onclick="entSev('warn',this)">AVERTISSEMENTS</button>
+        <button class="seg-i" data-s="info" onclick="entSev('info',this)">INFOS</button>
+      </div>
+    </div>
+    <div class="ov-body"><div id="entBody" class="advgrid"></div></div>
+  </div>
+</div>
+<div id="dlModal" class="ovl">
+  <div class="panel">
+    <div class="ov-head">
+      <b id="dlmTitle" style="font-size:15px"></b>
+      <button class="btn gray pad-s" onclick="fermerSurcouche($('dlModal'))"><svg class="ic13"><use href="#i-close"/></svg></button>
+    </div>
+    <div style="padding:10px 18px;border-bottom:1px solid var(--stroke-secondary);display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div class="seg" role="tablist" aria-label="Type de contenu">
+        <button class="seg-i on" data-dlm="games" onclick="dlmSearch('games')">Jeux / ISO</button>
+        <button class="seg-i" data-dlm="dlc" onclick="dlmSearch('dlc')">DLC / XBLA</button>
+      </div>
+      <span class="status" id="dlmStatus"></span>
+    </div>
+    <div class="ov-body dlm-body">
+      <!-- LA FICHE DU JEU, A GAUCHE. Elle est vide dans le HTML : tout son
+           contenu vient du jeu choisi, donc de `app.js`, ou les libelles passent
+           par `T()`. Des libelles ecrits ici auraient ete du francais que seule
+           la table du HTML statique traduit — et oublies, ils seraient restes en
+           francais DANS TOUTES LES LANGUES, anglais compris. -->
+      <aside class="fiche" id="dlmFiche"></aside>
+      <!-- LES QUATRE BLOCS DE CONTENU SONT UN SEUL ELEMENT DE GRILLE, et ce
+           conteneur n'est pas cosmetique : la grille range ses elements par
+           RANGEE, donc sans lui le titre « SOURCES » partageait la rangee 1 avec
+           la fiche (547 px) et sa propre table partait en rangee 2 — le titre
+           flottait seul, 495 px au-dessus du vide. Les quatre blocs restent dans
+           le FLUX NORMAL a l'interieur : un titre reste colle a sa table. -->
+      <div class="dlm-col">
+        <h2 class="sec" id="dlmSec1" style="display:none">SOURCES</h2>
+        <table class="tbl" style="display:none" id="dlmT1"><thead><tr><th>Titre</th><th class="c-act">Taille</th><th class="c-act">Source</th></tr></thead><tbody id="dlmResults"></tbody></table>
+        <h2 class="sec" id="dlmSec2" style="display:none">FICHIERS — INSTALLER = direct dans Content · DÉPÔT = à organiser</h2>
+        <table class="tbl" style="display:none" id="dlmT2"><thead><tr><th>Fichier</th><th>Type</th><th class="c-act">Taille</th><th class="c-act">Action</th><th>IA</th></tr></thead><tbody id="dlmFiles"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="scanModal" class="ovl">
+  <div class="panel">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--stroke-secondary);display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <input type="text" id="scanPath" placeholder="Chemin du dossier à analyser (ex. D:\Téléchargements)" style="flex:1" onkeydown="if(event.key==='Enter')scanFolderGo()">
+      <button class="btn accent" onclick="scanFolderGo()">ANALYSER</button>
+      <button class="btn gray pad-s" onclick="fermerSurcouche($('scanModal'))"><svg class="ic13"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="ov-body"><table class="tbl"><thead><tr><th>ÉLÉMENT</th><th>TYPE</th><th>JEU / TITLEID</th><th>TAILLE</th><th>ACTION</th></tr></thead><tbody id="scanBody"></tbody></table></div>
+    <div style="padding:12px 18px;border-top:1px solid var(--stroke-secondary)"><span class="dim cap" id="scanInfo"></span></div>
+  </div>
+</div>
+<div id="healthModal" class="ovl">
+  <div class="panel">
+    <div class="ov-head">
+      <b>SANTÉ DE LA BIBLIOTHÈQUE</b>
+      <button class="btn gray pad-s" onclick="fermerSurcouche($('healthModal'))"><svg class="ic13"><use href="#i-close"/></svg></button>
+    </div>
+    <div id="healthBody" class="ov-body" style="padding:14px 18px"></div>
+  </div>
+</div>
+<div id="cookieModal" class="ovl">
+  <div class="panel">
+    <div class="ov-head">
+      <b>CONNEXION ARCHIVE.ORG REQUISE</b>
+      <button class="btn gray pad-s" onclick="closeCookie()"><svg class="ic13"><use href="#i-close"/></svg></button>
+    </div>
+    <div id="ckBody" class="ov-body" style="padding:18px;font-size:var(--fs-body);line-height:1.65;color:var(--text-1)">
+      <button class="btn accent" style="width:100%;padding:12px;font-size:var(--fs-body)" onclick="iaAuto()">CONNEXION AUTO — ouvre archive.org, tu te connectes, je récupère les cookies</button>
+      <div id="ckStatus" style="color:var(--info);font-size:var(--fs-caption);margin-top:10px"></div>
+      <div style="color:var(--text-3);font-size:var(--fs-caption);margin:14px 0 10px;text-align:center">— ou a la main —</div>
+      <b class="acc">Etape 1</b> — Va sur <b>archive.org</b>, créé un compte gratuit et connecte-toi.<br>
+      <b class="acc">Etape 2</b> — Une fois connecté sur archive.org, appuie sur <b>F12</b> (outils developpeur).<br>
+      <b class="acc">Etape 3</b> — Onglet <b>Application</b> → <b>Cookies</b> → <b>https://archive.org</b><br>
+      <b class="acc">Etape 4</b> — Copie les valeurs de <b>logged-in-sig</b> et <b>logged-in-user</b>.<br>
+      <b class="acc">Etape 5</b> — Colle-les ci-dessous au format :<br>
+      <code style="display:block;background:var(--fill-default);border:1px solid var(--stroke-secondary);border-radius:6px;padding:8px 10px;margin:8px 0;font-size:var(--fs-caption);word-break:break-all;color:var(--text-3)">logged-in-sig=XXX...; logged-in-user=ton%40email.com</code>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <input type="text" id="ckIn" placeholder="Colle ton cookie ici : logged-in-sig=...; logged-in-user=..." style="flex:1;font-family:monospace;font-size:var(--fs-caption)">
+        <button class="btn accent" onclick="saveCookie()">SAUVER</button>
+      </div>
+      <div style="color:var(--text-3);font-size:var(--fs-caption);margin-top:10px">Le cookie reste stocke en local dans config.json — il n'est jamais envoye ailleurs que vers archive.org. S'il expire, refais la manip.</div>
+    </div>
+  </div>
+</div>
+<div id="pickModal" class="ovl">
+  <div class="panel">
+    <div class="ov-head">
+      <b id="pickTitre">CHOISIR UN DOSSIER</b>
+      <button class="btn gray pad-s" onclick="fermerSurcouche($('pickModal'))"><svg class="ic13"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="ov-body">
+      <div style="display:flex;gap:8px;align-items:center;margin:10px 0">
+        <button class="btn quiet pad-s" id="pickUp" onclick="pickGo(pickParent)">↑</button>
+        <input type="text" id="pickPath" class="dim" style="flex:1;font-family:monospace;font-size:var(--fs-caption)" onkeydown="if(event.key==='Enter')pickGo(this.value)">
+      </div>
+      <div id="pickSugg"></div>
+      <div id="pickListe" class="conlist" style="max-height:44vh"></div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--stroke-secondary);display:flex;gap:10px;align-items:center">
+      <span class="dim cap" id="pickInfo"></span>
+      <span style="flex:1"></span>
+      <button class="btn accent" onclick="pickChoisir()">CHOISIR CE DOSSIER</button>
+    </div>
+  </div>
+</div>
+<!-- L'ASSISTANT LOCAL. La coque porte `class="panel"` : le palier 560 px en fait
+     une feuille pleine hauteur sans une ligne de plus, comme les sept autres
+     panneaux. Le `z-index` vient de la FEUILLE (jeton --z-assistant), jamais d'un
+     attribut en ligne : une decision d'empilement se lit en un seul endroit, et
+     l'en-ligne battrait la feuille.
+     `#iaEnvoyer` et `#iaFermerLbl` sortent VIDES : leur libelle est pose par
+     `iaInit()` avec `T()`, donc il suit les quatre langues par les dictionnaires
+     du projet. Les trois libelles qui restent ici (ASSISTANT, ASSISTANT LOCAL,
+     FERMER) sont du HTML statique : `trDom()` les traduit par FR_EN_STATIQUE puis
+     DICT_FR_ES / DICT_FR_PT. -->
+<div id="iaModal" class="ovl">
+  <div class="panel">
+    <div class="ov-head">
+      <span class="bold" id="iaTitre">ASSISTANT LOCAL</span>
+      <span class="status" id="iaEtat"></span>
+      <button class="btn quiet" onclick="iaFermer()"><span id="iaFermerLbl">FERMER</span></button>
+    </div>
+    <div class="ov-body">
+      <div id="iaFil"></div>
+      <div class="ia-saisie">
+        <input type="text" id="iaQuestion" class="grow" placeholder="" />
+        <button class="btn accent" id="iaEnvoyer" onclick="iaDemander()"></button>
+      </div>
+      <div id="iaProposition"></div>
+    </div>
+  </div>
+</div>
+<!-- La boite de dialogue maison : remplace confirm() et prompt().
+     Ceux-ci GELAIENT le fil JavaScript — pendant une confirmation, le sondage des
+     telechargements (600 ms), des evenements (4 s), le journal et l'horloge
+     s'arretaient, et l'ecran montrait un etat perime. Et ils ne se pilotent pas a
+     la manette, alors que l'application est faite pour une tele.
+
+     NE PAS INVERSER LES DEUX BOUTONS DU PIED. `ouvrirSurcouche()` focalise le
+     PREMIER element focusable, et la manette fait un clic sur l'element focalise
+     (`PAD.A`). ANNULER en premier, c'est donc ANNULER par defaut : deux appuis
+     involontaires sur A refusent une suppression au lieu de la declencher. -->
+<div id="dialogModal" class="ovl">
+  <div id="dlgBox" class="panel">
+    <div class="ov-head"><b id="dlgTitre"></b></div>
+    <div class="ov-body">
+      <div id="dlgCorps" style="white-space:pre-wrap"></div>
+      <label id="dlgChamp" style="display:none">
+        <span class="cap dim" id="dlgLabel"></span>
+        <input type="text" id="dlgInput" onkeydown="if(event.key==='Enter')dlgRepondre(true)">
+      </label>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--stroke-secondary);display:flex;gap:10px;align-items:center">
+      <button class="btn gray" id="dlgNon" style="margin-right:auto" onclick="dlgRepondre(false)"></button>
+      <button class="btn" id="dlgOui" onclick="dlgRepondre(true)"></button>
+    </div>
+  </div>
+</div>
+<div id="diaModal" class="ovl">
+  <div id="diaFond"></div>
+  <div id="diaPile">
+    <img id="diaCover" alt="">
+    <img id="diaCoverB" alt="">
+  </div>
+  <div id="diaBas">
+    <div id="diaNom"></div>
+    <div id="diaMeta"></div>
+  </div>
+  <div id="diaCompteur"></div>
+  <div id="diaPause" hidden>❚❚</div>
+  <div id="diaVide" hidden></div>
+</div>
+<div id="langModal" class="ovl">
+  <div style="background:var(--bg-flyout);border:1px solid var(--stroke-secondary);border-radius:10px;padding:36px 44px;text-align:center;box-shadow:0 20px 60px rgba(1,4,9,.8);animation:modal-in .2s ease">
+    <div style="font-size:22px;font-weight:700;letter-spacing:1px;margin-bottom:6px">XBOX <b class="acc">360</b> MANAGER</div>
+    <div style="color:var(--text-3);font-size:var(--fs-body);margin-bottom:22px">Choose your language · Choisis ta langue · Elige tu idioma · Escolha o seu idioma</div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn" onclick="setLang('fr')">🇫🇷 Français</button>
+      <button class="btn gray" onclick="setLang('en')">🇬🇧 English</button>
+      <button class="btn gray" onclick="setLang('es')">🇪🇸 Español</button>
+      <button class="btn gray" onclick="setLang('pt')">🇵🇹 Português</button>
+    </div>
+  </div>
+</div>
+<div id="helpModal" class="ovl">
+  <div style="background:var(--bg-flyout);border:1px solid var(--stroke-secondary);border-radius:var(--r-overlay);padding:26px 30px;width:min(560px,92vw);box-shadow:var(--el-3);animation:modal-in 200ms var(--ease-decel)">
+    <div id="helpBody"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:18px">
+      <button class="btn gray" onclick="fermerSurcouche($('helpModal'))">FERMER</button>
+    </div>
+  </div>
+</div>
+<div id="toasts"></div>
+<div id="dropzone"><div class="big">DEPOSE TES FICHIERS ICI</div><div class="sm">ISO · 7Z · ZIP · RAR · dossiers GOD — tout part dans le dépôt, rien ne bouge sans ta confirmation</div></div>
+<div class="detail" id="detail">
+  <div class="dbg" id="dpBg"></div>
+  <button class="dclose" onclick="closeDetail()"><svg class="ic13"><use href="#i-close"/></svg></button>
+  <div class="dfix">
+    <div class="dtop">
+      <img class="dcov" id="dpImg" alt="">
+      <div class="dhead">
+        <div class="dname" id="dpName"></div>
+        <div id="dpMeta"></div>
+      </div>
+    </div>
+    <div class="dfacts" id="dpFacts"></div>
+    <!-- UNE SEULE LISTE A LA FOIS : les trois onglets remplacent les deux
+         sections empilees qui faisaient un mur de lignes. -->
+    <div class="dtabs" role="tablist" aria-label="Sections de la fiche">
+      <button class="dtab on" id="dtCt" role="tab" aria-selected="true" onclick="detailTab('ct')">CONTENU<b class="dtn" id="dtnCt"></b></button>
+      <button class="dtab" id="dtDlc" role="tab" aria-selected="false" onclick="detailTab('dlc')">DLC<b class="dtn" id="dtnDlc"></b></button>
+      <button class="dtab" id="dtTu" role="tab" aria-selected="false" onclick="detailTab('tu')">MISES À JOUR<b class="dtn" id="dtnTu"></b></button>
+    </div>
+  </div>
+  <div class="dscroll">
+    <div class="dlist" id="dpList">Chargement...</div>
+    <div class="dlist" id="dpDlc" hidden></div>
+    <div class="dlist" id="dpTu" hidden></div>
+  </div>
+  <div class="dactions">
+    <button class="btn accent" onclick="dpOpen()"><span class="gh a">A</span>OUVRIR</button>
+    <span class="dgrp">
+      <button class="dbtn" title="RENOMMER" onclick="selRename()">✎</button>
+      <button class="dbtn" title="DÉPLACER" onclick="dpMove()">⇄</button>
+      <button class="dbtn" title="JAQUETTE" onclick="dpCover()">▦</button>
+      <button class="dbtn" title="COPIER TID" onclick="dpCopy()">⧉</button>
+    </span>
+    <button class="btn red dp-danger" onclick="selDelete()"><span class="gh b">B</span>SUPPRIMER</button>
+  </div>
+</div>
+<footer id="ctlbar">
+  <div id="abHint"></div>
+  <div class="actionbar" id="actionbar" style="display:none">
+    <button class="btn gray" onclick="selOpen()">OUVRIR</button>
+    <button class="btn gray" onclick="selRename()">RENOMMER</button>
+    <button class="btn red" onclick="selDelete()">SUPPRIMER</button>
+    <button class="btn orange" onclick="openOrganize()">ORGANISER LE DÉPÔT</button>
+  </div>
+  <div class="cb-right">
+    <div id="dlMini" role="button" tabindex="0" onclick="showView('act')"><div class="mt" id="dlMiniT"></div><div class="mb"><div id="dlMiniB"></div></div><div class="ms" id="dlMiniS"></div></div>
+    <!-- LE SECOND CHEMIN VERS L'ASSISTANT vit dans le pied de page, a cote du
+         mini-panneau de telechargement : c'est la meme famille de composant (une
+         pastille discrete qui ouvre une surcouche), et il est joignable depuis
+         N'IMPORTE QUELLE VUE, pas seulement l'accueil.
+         LES DIMENSIONS DE L'ICONE SONT OBLIGATOIRES : un <svg> sans largeur ni
+         hauteur prend celles de son conteneur — le defaut a deja ete mesure dans
+         ce depot (une ligne de 200 px avec des fleches geantes). -->
+    <div id="iaBouton" role="button" tabindex="0" onclick="iaOuvrir()" title="Assistant">
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>
+      <span>ASSISTANT</span>
+    </div>
+    <span class="status" id="selInfo"></span>
+    <span id="clock">--:--</span>
+  </div>
+</footer>
+<script src="/i18n.js" defer></script>
+<script src="/app.js" defer></script>
+</body>
+</html>

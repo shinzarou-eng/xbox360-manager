@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- L'icone de notification vient de WinForms : WPF n'en a pas, et
+         l'alternative serait une centaine de lignes d'interop autour de
+         `Shell_NotifyIcon` pour le meme resultat. C'est une PROPRIETE du SDK,
+         pas une dependance a telecharger. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>XboxManager</AssemblyName>
+    <RootNamespace>XboxManager</RootNamespace>
+    <!-- L'icone de la fenetre, de la barre des taches et du raccourci. Six
+         tailles dans un seul `.ico`, fabriquees depuis la marque de la PAGE par
+         `desktop/assets/ico.js` (aucune dependance) : Windows prend celle qu'il
+         lui faut au lieu de reduire une image de 256 px, qui serait molle a
+         16 px. -->
+    <ApplicationIcon>..\assets\icone.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- `UseWindowsForms` ajoute un `using System.Windows.Forms` IMPLICITE, qui
+         rend `Application`, `MessageBox` et `Window` ambigus dans un projet WPF
+         (mesure : erreur CS0104 sur `Application`). On retire cet implicite :
+         `Notify.cs` nomme deja les rares types WinForms par un alias explicite
+         (`WinForms.NotifyIcon`), ce qui est plus lisible qu'un nom pleinement
+         qualifie au cas par cas. -->
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Version FIGEE sur celle du cache NuGet local : nuget.org n'est pas
+         joignable depuis dotnet dans cet environnement (mesure), et le package
+         y est deja. Changer ce numero demande une machine qui atteint
+         nuget.org. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- L'icone doit aussi etre COPIIEE a cote de l'executable : `ApplicationIcon`
+         ne fait que l'inscrire dans les ressources de l'exe, et la zone de
+         notification, elle, lit un FICHIER. Sans ce `Content`, le journal disait
+         « icone absente » et l'icone de notification retombait sur celle de
+         l'executable (mesure). -->
+    <Content Include="..\assets\icone.ico" Link="assets\icone.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XboxManager.Coeur\XboxManager.Coeur.csproj" />
+  </ItemGroup>
+
+</Project>

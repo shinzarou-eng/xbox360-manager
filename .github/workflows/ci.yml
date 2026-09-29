@@ -1,0 +1,70 @@
+name: CI
+
+# Le projet est sans dependance : pas de `npm ci`, donc une CI rapide et qui ne
+# peut pas casser pour une raison exterieure (registre npm indisponible, etc.).
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# UNE SEULE MATRICE A LA FOIS PAR BRANCHE.
+#
+# Sans ce bloc, cinq pushs d'affilee lancent cinq matrices de 7 jobs — 35 jobs
+# dont 28 inutiles, puisque seule la derniere version compte.
+#
+# `cancel-in-progress` interrompt la matrice devenue obsolete. On ne perd aucune
+# couverture : c'est la meme, appliquee au code le plus recent.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: tests (${{ matrix.os }} / node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Syntaxe du serveur
+        run: node --check server.js
+
+      # node --check ne valide que la SYNTAXE. Une erreur survenant a l'execution
+      # du module (variable utilisee avant sa declaration, dependance circulaire,
+      # fichier de donnees illisible) passe le controle de syntaxe et ne se voit
+      # qu'au demarrage. C'est arrive : un bloc place avant `const ROOT` faisait
+      # echouer le serveur au chargement avec un node --check vert.
+      - name: Chargement complet du serveur
+        run: node server.js --selftest
+
+      - name: Tests
+        run: npm test
+
+      # Informatif : le diagnostic ne doit PAS faire echouer la CI, un
+      # environnement d'integration continue n'a legitimement ni disque Xbox ni
+      # 7-Zip. Il sert a verifier qu'il s'execute sans lever et rend un rapport.
+      - name: Diagnostic d'environnement (informatif)
+        run: node scripts/doctor.js
+        continue-on-error: true
+
+  lint-html:
+    name: garde-fous UI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Le <script> inline de public/index.html doit PARSER : un simple doublon
+      # `const` rend toute l'interface inerte sans aucune erreur cote serveur.
+      - name: Le JS servi doit compiler
+        run: node test/client.test.js

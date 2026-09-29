@@ -1,0 +1,123 @@
+# secrets / donnees personnelles
+config.json
+secrets.json
+.iaprofile/
+covers/
+dl/
+dlc_index/
+_extract_tmp/
+_A_TRIER/
+Content/
+Games/
+Homebrew/
+Emulators/
+tu_installed.json
+downloads.json
+tu_check.json
+# cache de descriptions ecrites par le modele local (/api/assistant/description) :
+# il grossit a chaque jeu decrit, et il vit a la racine du depot
+.ia-descriptions.json
+
+# runtime
+node_modules/
+*.log
+.srvpid
+nul
+*.png
+!docs/*.png
+
+# outils tiers (a telecharger separement, voir README)
+iso2god.exe
+ISO2GOD/*.exe
+exiso/*.exe
+God2Iso/
+
+# archives / homebrew telecharges
+*.rar
+*.zip
+*.7z
+*.iso
+
+# legacy
+XboxLibrary.*
+XboxSorter.*
+TRIER.bat
+trier_jeux.sh
+xbox_*.ps1
+shot*.ps1
+test_ftp.js
+
+# AGENTS.md N'EST PLUS IGNORE. Il porte la section « Agent skills » qui pointe vers
+# docs/agents/ : sans lui, ces trois fichiers arrivent dans un clone sans que rien
+# ne dise de les lire. Verifie avant publication : aucune IP, aucun chemin
+# personnel, aucune valeur de secrets.json.
+hb_index.json
+as_index.json
+mediaid.json
+tailles.json
+_carve.xex
+adv.json
+tuaw.json
+tunfs.json
+t4.json
+
+# artefacts de travail de l'agent
+_baseline/
+_commitmsg.txt
+_pending/
+# profil jetable du navigateur utilise par scripts/uicheck.js
+.browser-probe/
+# captures produites par scripts/uicheck.js (UICHECK_SHOT=...)
+shot-*.png
+
+_msg.txt
+_commitmsg.txt
+
+
+# fichiers de travail temporaires
+_*.txt
+_*.js
+
+
+# dataset : le cache de collecte est jetable, l'index est versionne
+data/.tu-cache/
+
+
+# archive de distribution (produite par scripts/build-release.ps1)
+dist/
+
+# sorties de compilation de la coquille WPF (dotnet build) : elles pesent des
+# dizaines de Mo, elles sont propres a une machine, et elles n'ont rien a faire
+# dans un depot — ni dans l'archive de distribution.
+desktop/**/bin/
+desktop/**/obj/
+
+
+# index de vocabulaire, regenere par scripts/extrait-vocabulaire.js
+i18n-vocabulaire.json
+
+
+# artefacts jetables des sondes et scripts d'agent (.probe-*, .tmp-*, .t7-*, .t8-*)
+.probe-*
+.tmp-*
+.t7-*
+.t8-*
+
+# plans/specs d'agent volumineux — travail local, pas dans le depot public
+.superpowers/
+mesure.tmp.js
+launch_browser.ps1
+
+# outils d'agent / maquettes / specs — travail local, pas dans le depot public
+mockups/
+prototypes/
+pctest/
+.devin/
+.specify/
+specs/
+docs/superpowers/
+scripts/serve-mockups.js
+scripts/mesure-ia-*.js
+scripts/verif-assistant-*.js
+_essai_transfert/
+shot-*.jpg

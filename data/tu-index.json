@@ -1,0 +1,23 @@
+{
+ "schema": 1,
+ "source": "https://xboxunity.net/Resources/Lib/TitleUpdateInfo.php",
+ "generated": "2026-09-19T09:33:36.809Z",
+ "titles": [
+  {
+   "tid": "584109B7",
+   "name": "0 day Attack on Earth",
+   "mediaIds": [
+    {
+     "media": "79595405",
+     "updates": [
+      {
+       "tuid": "21442",
+       "version": 2,
+       "size": 233472
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+<Application x:Class="XboxManager.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XboxManager">
+    <!-- PAS de StartupUri : la fenetre est choisie dans `OnStartup` (elle depend
+         des arguments, et la fenetre de mesure du glissement en est une AUTRE).
+         Avec StartupUri, WPF en ouvrirait une seconde, sans WebView2.
+         PIEGE : un commentaire XML ne peut pas contenir deux tirets qui se
+         suivent — les noms d'arguments s'ecrivent donc ici sans leur prefixe. -->
+    <Application.Resources>
+
+    </Application.Resources>
+</Application>

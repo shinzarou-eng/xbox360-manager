@@ -1,0 +1,2711 @@
+/* ==========================================================================
+   Xbox 360 Manager — feuille de style
+   --------------------------------------------------------------------------
+   DIRECTION : Aurora, construit avec le langage visuel de Windows 11.
+
+   Ce ne sont pas deux styles qui se superposent, c'est une hierarchie :
+
+     - le FOND D'ECRAN DE WINDOWS est la couche Mica. Mica, dans Windows 11,
+        echantillonne le fond d'ecran du bureau, le floute, le desature et le
+        teinte ; les surfaces posees dessus ne font que laisser transparaitre ce
+        resultat. L'application etant locale, elle lit le fichier que Windows
+        compose lui-meme (`TranscodedWallpaper`, voir `lib/wallpaper.js`) : le
+        fond est donc celui du bureau, deja rendu dans le mode d'ajustement
+        choisi, sans un pixel de recadrage a recalculer.
+     - les SURFACES sont Fluent 2 : remplissages translucides, filets de 1 px a
+        faible opacite, rayons de 4 px (controles) et 8 px (cartes), elevation en
+        deux temps plutot qu'une grosse ombre.
+     - l'EN-TETE est en MICA ALT : dans une fenetre a onglets de Windows 11
+        (Explorateur, Parametres), la bande d'onglets est plus SOMBRE que le
+        contenu. C'est ce qui donne la superposition, et non un filet de plus.
+     - l'ACCENT est le vert Aurora, pas le bleu de Windows. C'est ce qui fait
+        qu'on reconnait la console et pas un panneau de configuration.
+
+   Les valeurs ne sont pas inventees : elles viennent des jetons Fluent 2
+   (ControlFill, CardStroke, TextPrimary/Secondary/Tertiary, rampe de rayons) et
+   de la rampe typographique de Windows 11. C'est ce qui rend le resultat
+   previsible sans avoir a le regarder.
+
+   CE QUE MICA N'EST PAS : ce n'est pas un filtre par element. `backdrop-filter`
+   sur chacune des 22 cartes d'une bibliotheque serait a la fois FAUX (Windows
+   compose le materiau une seule fois, au niveau de la fenetre) et ruineux (22
+   calques de composition plein ecran). Le flou est reserve a l'en-tete et aux
+   surfaces TRANSITOIRES — menus, boites de dialogue, notifications — la ou
+   Windows 11 emploie vraiment l'acrylique.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. JETONS — Fluent 2 (theme sombre) + identite Aurora
+   ========================================================================== */
+:root{
+  /* --- fonds, du plus profond au plus proche --- */
+  --bg-base:#0a0b07;          /* SolidBackgroundBase, teinte chaude 360 */
+
+  --bg-card:#ffffff0d;        /* CardBackgroundDefault : 5 % de blanc */
+  --bg-card-hover:#ffffff14;
+  --bg-flyout:#262a1ed9;      /* ACRYLIQUE : 85 % + flou, surfaces transitoires */
+
+  /* --- remplissages de controle (Fluent control fills) --- */
+  --fill-default:#ffffff0d;
+  --fill-secondary:#ffffff0f;
+  --fill-tertiary:#ffffff12;
+  --fill-subtle:#ffffff09;
+
+  /* --- filets : Fluent n'encadre pas, il souligne --- */
+  --stroke-default:#ffffff14;
+  --stroke-secondary:#ffffff0a;
+  --stroke-strong:#ffffff26;
+
+  /* --- encre : trois niveaux, teinte chaude du design (olive clair
+     plutot que blanc froid) — les alphas restent ceux de la rampe Windows 11 --- */
+  --text-1:#eef1e4;
+  --text-2:#a9ad9b;
+  --text-3:#7b806b;
+  --text-disabled:#7b806b5c;
+
+  /* --- ACCENT : le vert Aurora. Windows 11 eclaircit son accent en theme
+     sombre pour tenir le contraste ; on fait pareil, et le noir sur accent
+     atteint 9:1. --- */
+  --ac:#9ede2f;
+  --ac-hover:#baf04f;
+  --ac-pressed:#7cba23;
+  --ac-ink:#141b06;           /* encre des boutons pleins */
+  --ac-fill:#9ede2f14;        /* 8 % — la pastille discrete du design */
+  --ac-stroke:#9ede2f33;
+  --ac-glow:#9ede2f40;
+
+  /* --- signaux : les teintes chaudes du design (ambre, rouge corail)
+     remplacent le jaune pur et le rose --- */
+  --danger:#e05252;
+  --danger-fill:#e052521f;
+  --warn:#e8b33d;
+  --warn-fill:#e8b33d26;
+  --info:#60cdff;
+  --info-fill:#60cdff26;
+
+  /* --- rayons : rampe Fluent 2 --- */
+  --r-control:4px;            /* boutons, champs */
+  --r-overlay:8px;            /* cartes, menus, surfaces */
+
+  --r-pill:999px;
+
+  /* --- hauteur de controle. Dans Windows 11, les controles d'une meme barre
+     partagent une HAUTEUR (32 px au standard, 40 px en tactile). L'en-tete, lui,
+     melangeait 44 px d'onglets, 31 px de selecteur et 26 px de bouton de langue :
+     le bouton de langue ressemblait a une pastille posee la par hasard. Les
+     onglets gardent 44 px — c'est une bande d'onglets, pas un controle, et la
+     cible manette compte plus la que l'alignement. --- */
+  --h-control:32px;
+
+  /* Ordre d'empilement des surcouches. Regroupe ici pour qu'il se lise d'un coup
+     d'oeil : le diaporama passe SOUS l'aide et SOUS les boites de dialogue, pour
+     qu'une confirmation puisse s'afficher par-dessus. */
+  --z-diaporama:98;
+  /* L'ASSISTANT AUSSI. Il passe sous l'aide et sous les boites de dialogue, pour
+     la meme raison que le diaporama : une confirmation doit pouvoir s'afficher
+     par-dessus lui, et une aide ouverte ne doit pas etre recouverte. Il est SOUS
+     le diaporama parce que celui-ci occupe tout l'ecran et qu'un diaporama est
+     un etat passager. Le jeton reste dans `:root` pour que l'empilement se lise
+     entierement ici — et JAMAIS en ligne sur l'element : un en-ligne battrait la
+     feuille et l'ordre se deciderait a deux endroits. */
+  --z-assistant:97;
+
+  /* --- MICA : la matiere -----------------------------------------------------
+     Mica est UNE composition, faite une fois pour la fenetre : le fond d'ecran
+     est floute, desature et teinte, et les controles poses dessus ne sont que
+     des REMPLISSAGES translucides. Ce n'est donc PAS un filtre par element.
+     Le flou de la couche de fond est a 48 px, et PAS plus : un garde-fou de
+     fluidite (`test/ui-quality.test.js`) plafonne ce rayon a 50 px parce qu'un
+     flou plein ecran se paie proportionnellement a son rayon. Il faut savoir que
+     ce cout est desormais paye EN PERMANENCE — l'ancien fond etait le fanart du
+     jeu selectionne, donc il ne se peignait que sur la fiche d'un jeu. Le fond du
+     bureau, lui, est toujours la. Monter a 64 px n'aurait rien change a l'effet
+     (c'est la PRESENCE du fond qui fait le materiau, pas le rayon) et aurait
+     augmente une facture deja continue. --- */
+  /* Mica Alt : la bande d'onglets d'une fenetre a onglets Windows 11. Sa teinte
+     est plus SOMBRE que celle du contenu, et elle laisse le fond d'ecran passer
+     PLUS fort — c'est la definition de Mica Alt, pas un reglage de gout. A 85 %
+     (la valeur precedente) l'en-tete etait un aplat : 15 % du fond d'ecran ne se
+     voient pas. A 72 % d'une teinte plus sombre, la bande se detache du contenu
+     ET se teinte du bureau. */
+  --mica-alt:#11130cb8;
+
+  /* --- elevation : Fluent empile deux ombres discretes plutot qu'une forte --- */
+  --el-1:0 1px 2px #0000001f,0 0 2px #0000001f;
+  --el-2:0 2px 4px #00000024,0 0 2px #0000001f;
+  --el-3:0 8px 16px #00000026,0 0 2px #0000001f;
+  --el-4:0 16px 32px #0000002e,0 0 4px #0000001f;
+
+  /* --- typographie : rampe Windows 11 --- */
+  --font:'Segoe UI Variable Text','Segoe UI Variable','Segoe UI',system-ui,-apple-system,sans-serif;
+  --font-display:'Segoe UI Variable Display','Segoe UI Variable','Segoe UI',system-ui,sans-serif;
+  --mono:'Cascadia Mono','Consolas',ui-monospace,monospace;
+
+  --fs-caption:12px;          /* Caption */
+  --fs-body:14px;             /* Body */
+  --fs-subtitle:20px;         /* Subtitle */
+  --fs-title:28px;            /* Title */
+  --fs-title-lg:40px;         /* Title Large */
+  --lh-caption:16px;
+  --lh-body:20px;
+  --lh-subtitle:28px;
+
+  /* --- espacement : rampe de 4 --- */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+
+  /* --- mouvement Fluent : decelerer a l'entree, accelerer a la sortie --- */
+  --ease-decel:cubic-bezier(0,0,0,1);
+
+  --t-fast:150ms;
+  --t-base:200ms;
+  --t-slow:250ms;
+
+  /* --- largeur de lecture --- */
+  --w-max:1280px;
+}
+
+/* ==========================================================================
+   2. SOCLE
+   ========================================================================== */
+*{margin:0;padding:0;box-sizing:border-box}
+/* LE THEME DU NAVIGATEUR, PAS SEULEMENT LE NOTRE.
+   Sans `color-scheme`, Chromium peint les controles NATIFS en clair : la liste
+   deroulante du selecteur de disque s'ouvrait BLANCHE sur une application sombre,
+   avec un texte gris clair illisible. Le select lui-meme etait stylé, mais la
+   liste qu'il deploie appartient au navigateur, pas a la feuille de style.
+   C'est une ligne, et elle corrige les trois <select> d'un coup. */
+:root{color-scheme:dark}
+[hidden]{display:none!important}
+
+/* Barres de defilement : fines, arrondies, discretes au repos — comme Windows 11 */
+/* Barres de defilement : fines, arrondies — mais VISIBLES. A 15 % de blanc sur un
+   fond sombre, le pouce ne se distinguait pas du fond : quand le defilement a
+   ete repare, rien ne l'annoncait encore a l'ecran. */
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:#ffffff08}
+::-webkit-scrollbar-thumb{background:#ffffff42;border-radius:var(--r-pill);border:4px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:#ffffff6b;background-clip:padding-box}
+::-webkit-scrollbar-corner{background:transparent}
+
+/* La selection porte l'accent : un copier-coller de TitleID ou de chemin se
+   voit en vert Aurora, pas en bleu systeme — la couleur par defaut n'a aucun
+   lien avec le reste de l'app. */
+::selection{background:var(--ac);color:var(--ac-ink)}
+
+body{
+  background:var(--bg-base);
+  color:var(--text-1);
+  font-family:var(--font);
+  font-size:var(--fs-body);
+  line-height:var(--lh-body);
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* Chasse tabulaire : tailles, identifiants et pourcentages doivent s'aligner. */
+.tmid,.tbfree,#clock,.ldim,.dpath,.midc,.tver{font-variant-numeric:tabular-nums}
+
+/* --- LA COUCHE MICA : le fond d'ecran de Windows, floute et teinte ----------
+   C'est la SEULE couche qui echantillonne quelque chose. Tout le reste se
+   contente de la laisser transparaitre.
+
+   Le fichier vient de `GET /api/wallpaper`, qui lit le `TranscodedWallpaper` de
+   Windows : l'image deja rendue par le bureau, dans le mode d'ajustement choisi.
+   Quand il n'y en a pas — Linux, ou aucun fond defini — la route rend 204 et il
+   ne se peint rien : la couleur de base reste, et rien ne casse.
+
+   `inset:-12%` plutot que `transform:scale(1.3)` : un flou de 64 px fait
+   disparaitre les bords de l'element, et il faut donc peindre PLUS GRAND que
+   l'ecran. Le debordement le fait sans creer de calque de composition, et il
+   tient sous `prefers-reduced-motion` — un `scale` y etait desactive, ce qui
+   ramenait les bords flous dans l'ecran. */
+#appbg{
+  position:fixed;inset:-12%;z-index:0;
+  background-image:url('/api/wallpaper');
+  background-size:cover;background-position:center 22%;
+  filter:blur(48px) saturate(1.4) brightness(.92);
+}
+/* LA TEINTE MICA. C'est elle qui decide de la force du materiau : Windows 11
+   pose une teinte sombre sur le fond floute, donc le fond d'ecran TEINTE sans
+   dominer. Mesure avant : le fond ne pesait que 10 a 21 % des pixels, et la
+   carte graphique n'avait rien a echantillonner du tout — parce que l'ancien
+   fond etait le fanart du jeu selectionne, et qu'au tableau de bord aucun jeu
+   n'est selectionne. Le fond du bureau, lui, est toujours la.
+   Le degrade est plus clair en haut (la ou Mica se voit le plus dans une fenetre
+   Windows 11) et plus profond en bas, ou le texte est le plus dense. La vignette
+   est discrete : a 55 % de noir, elle ecrasait le fond d'ecran dans les coins. */
+#appbg::after{
+  content:"";position:absolute;inset:0;
+  background:
+    linear-gradient(180deg,#14160fb3,#14160fd1 55%,#14160fe6),
+    radial-gradient(130% 100% at 50% 0%,#00000000 45%,#0a0b075c 100%);
+}
+/* LE PAPIER PEINT EST UNE OPTION — `body.papier` le retablit depuis les
+   reglages. Par defaut le fond est un graphite neutre : les jaquettes donnent
+   la couleur, et un arriere-plan personnel n'est jamais en competition avec
+   le contenu qu'il porte. Sans image a echantillonner, le flou de 48 px
+   paierait une couche plein ecran pour rien — il saute avec l'image. */
+body:not(.papier) #appbg{background-image:none;filter:none}
+
+/* La coque doit etre un conteneur flex qui prend la hauteur RESTANTE.
+   Sans cette regle, `main{flex:1}` ne s'appliquait a rien (son parent etait un
+   bloc ordinaire), donc la vue n'avait aucune hauteur bornee, donc son
+   `overflow:auto` ne declenchait AUCUNE barre de defilement : le contenu
+   depassait simplement le bas de la fenetre et `overflow:hidden` sur body le
+   coupait. Ni la molette ni la barre ne pouvaient l'atteindre.
+   `min-height:0` est indispensable : sans lui, un enfant flex refuse de devenir
+   plus petit que son contenu, et le defilement ne se declenche toujours pas. */
+#wrap{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ==========================================================================
+   3. COQUE — barre de titre, barre d'etat, en-tete de vue
+   ========================================================================== */
+/* La barre haute, EN DEUX BANDES.
+   Le bandeau d'Aurora n'est pas une rangee d'onglets poses a cote du logo : les
+   sections y occupent une BANDE a elles, sur toute la largeur, et la section
+   active est une LAME pleine, coupee en biais.
+   Les onglets, eux, se disputaient la place du logo et de l'etat du disque, et
+   se coupaient des qu'il y en avait sept. */
+#topbar{
+  position:relative;z-index:3;
+  display:flex;flex-direction:column;
+  /* MICA ALT. Une fenetre a onglets de Windows 11 n'a pas la meme matiere que
+     son contenu : la bande d'onglets est plus SOMBRE et laisse le fond d'ecran
+     passer plus fort. C'est ce contraste entre les deux qui donne la
+     superposition — un filet de plus n'y suffisait pas.
+     Le flou reste : l'en-tete echantillonne la couche Mica, qui est deja floutee
+     a 48 px, donc celui-ci ne fait que l'adoucir. Il est conserve parce qu'il est
+     deja la et verifie ; le retirer serait une optimisation que rien ne mesure. */
+  background:var(--mica-alt);
+  border-bottom:1px solid var(--stroke-secondary);
+  backdrop-filter:blur(30px) saturate(1.4);
+  -webkit-backdrop-filter:blur(30px) saturate(1.4);
+}
+/* LA RANGEE D'IDENTITE, MESUREE. Elle faisait 73 px de haut, dont 49 pour le
+   seul bloc de marque : le nom tenait sur DEUX lignes empilees (« XBOX 360 »
+   puis « LIBRARY MANAGER »), donc la moitie de la hauteur de l'en-tete servait
+   a deux mots de 14 px. Le verrou tient maintenant sur UNE ligne — le
+   sous-titre reste, mais a cote, derriere un filet. La rangee passe de 73 a
+   39 px, et ces 34 px sont rendus a TOUTES les vues. */
+.tb-top{display:flex;align-items:center;gap:var(--sp-4);padding-block:var(--sp-1)}
+
+.brand{display:flex;align-items:center;gap:var(--sp-2);font-family:var(--font-display);font-weight:600;font-size:var(--fs-body);letter-spacing:0}
+.brand .xlogo{width:26px;height:26px;min-width:26px;filter:drop-shadow(0 0 8px var(--ac-glow))}
+.brand b{color:var(--ac);font-weight:600}
+.brand .bn{white-space:nowrap}
+.brand .bs{font-size:var(--fs-caption);letter-spacing:.02em;color:var(--text-3);white-space:nowrap;padding-left:var(--sp-2);border-left:1px solid var(--stroke-secondary)}
+
+/* LA BANDE DES ONGLETS. `overflow-x:auto` plutot que de laisser deborder : a sept
+   sections, une fenetre etroite doit pouvoir faire defiler.
+   DEUX CORRECTIONS MESUREES ICI. Les onglets faisaient 34 px de haut — sous la
+   cible tactile et manette de 44 px, alors que l'anneau de focus doit se viser a
+   trois metres. Et ils s'arrêtaient a 1147 px dans une bande de 1280 : 133 px
+   restaient vides a droite. Ils S'ETIRENT desormais pour remplir la bande. */
+.tb-tabs{display:flex;align-items:stretch;gap:2px;min-height:44px;overflow-x:auto;scrollbar-width:none}
+.tb-tabs::-webkit-scrollbar{display:none}
+.ttab{
+  flex:1 1 auto;min-width:max-content;
+  display:flex;align-items:center;justify-content:center;gap:var(--sp-2);
+  background:#ffffff0f;border:0;color:var(--text-2);
+  padding-inline:var(--sp-3);
+  font-family:var(--font-display);font-size:var(--fs-caption);
+  font-weight:600;text-transform:uppercase;letter-spacing:.055em;
+  cursor:pointer;
+  /* UN ONGLET, PAS UNE LAME. Le pan coupe en biais coutait 26 px de reserve a
+     droite de CHAQUE libelle pour loger son biais, et huit chevrons alignes
+     faisaient un peigne. Des coins hauts arrondis disent la meme chose —
+     « ceci est un onglet » — sans rien rogner. */
+  border-radius:9px 9px 0 0;
+  transition:color var(--t-fast) var(--ease-decel),background-color var(--t-fast) var(--ease-decel),box-shadow var(--t-fast) var(--ease-decel);
+}
+.ttab .ni{display:flex}
+.ttab .ni svg{width:15px;height:15px;display:block}
+.ttab:hover{color:var(--text-1);background:#ffffff17}
+.ttab:focus-visible{outline:2px solid var(--ac);outline-offset:-2px}
+/* L'onglet actif : teinte legere et trait d'accent plutot que l'aplat vert.
+   Le trait souscrit est le langage de selection de Windows 11 (Terminal,
+   Settings) — il reste le seul repere « ou suis-je » colore de la barre, sans
+   repasser le libelle en encre sombre ni peser plus lourd que les actions. */
+.ttab.active{
+  color:var(--ac);background:var(--fill-secondary);
+  box-shadow:inset 0 -3px 0 var(--ac);
+}
+.ttab.active .ni{color:var(--ac)}
+
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:var(--sp-3)}
+.tb-right select{
+  background:var(--fill-default);border:1px solid var(--stroke-default);border-bottom-color:var(--stroke-strong);
+  border-radius:var(--r-control);padding-inline:var(--sp-2);font-size:var(--fs-body);font-family:inherit;
+  color:var(--text-1);
+  /* MEME HAUTEUR QUE LE BOUTON DE LANGUE ET QUE LES AUTRES CONTROLES. Un select
+     se dimensionne sur son texte : il faisait 31 px quand le bouton voisin en
+     faisait 26, et les deux paraissaient appartenir a deux applications. */
+  height:var(--h-control);
+    /* BORNE. Sans largeur maximale, un select s'etire sur son option la
+       plus longue : avec des roles detailles il poussait tout le bandeau. Le
+       detail complet reste en infobulle, le libelle affiche est court.
+       270 px SUFFISENT depuis que l'option ne porte plus la place libre : « H ◆ ·
+       797.8 Go — Jeux · Dépôt · DLC/TU » demandait 246 px de texte pour 228
+       disponibles, et le selecteur affichait « ... DLC/TU » coupe en « DL... ».
+       Ce fait-la est deja montre juste a droite, avec sa jauge. */
+    max-width:270px;text-overflow:ellipsis;
+}
+/* Jauge du disque : la meme information que dans la barre, avec sa proportion. */
+.tb-disk{display:flex;flex-direction:column;gap:3px;min-width:130px}
+.tbfree{color:var(--text-3);font-size:var(--fs-caption);line-height:var(--lh-caption);font-family:var(--mono)}
+.tb-gauge{height:3px;background:#ffffff1a;border-radius:var(--r-pill);overflow:hidden}
+.tb-gauge>div{height:100%;width:0;background:var(--ac);transition:width var(--t-slow) var(--ease-decel)}
+/* LE BOUTON DE LANGUE EST UN CONTROLE, PAS UNE PASTILLE. A 26 px il etait le plus
+   petit element d'une bande qui en portait de 44 et de 31. Meme hauteur que le
+   selecteur, meme famille de remplissage : deux controles voisins se lisent comme
+   deux controles. L'encre monte aussi a --text-2 : un bouton qui a l'air
+   desactive ne se clique pas, et la barre de titre de Windows 11 n'emploie pas
+   l'encre tertiaire pour ses boutons. */
+#langBtn{height:var(--h-control);padding-inline:var(--sp-3);font-size:var(--fs-caption);color:var(--text-2);white-space:nowrap}
+#langBtn:hover{color:var(--text-1)}
+
+/* Barre basse : equivalent de la barre d'etat Windows, mais avec les glyphes
+   manette d'Aurora. */
+#ctlbar{
+  position:relative;z-index:3;
+  display:flex;align-items:center;gap:var(--sp-3);
+  padding:var(--sp-2) var(--sp-5);
+  background:#14160fcc;
+  border-top:1px solid var(--stroke-secondary);
+  backdrop-filter:blur(30px) saturate(1.4);
+  -webkit-backdrop-filter:blur(30px) saturate(1.4);
+}
+#abHint{display:flex;align-items:center;color:var(--text-3);font-size:var(--fs-caption)}
+.cb-right{margin-left:auto;display:flex;align-items:center;gap:var(--sp-4)}
+#clock{font-family:var(--mono);color:var(--text-2);font-size:var(--fs-caption);letter-spacing:.02em}
+#dlMini{display:none;align-items:center;gap:var(--sp-2);background:var(--fill-default);border:1px solid var(--stroke-default);border-radius:var(--r-pill);padding:4px 10px;cursor:pointer;font-size:var(--fs-caption)}
+#dlMini:hover{background:var(--fill-secondary)}
+#dlMini .mt{color:var(--text-1);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#dlMini .mb{width:64px;height:3px;background:#ffffff1f;border-radius:var(--r-pill);overflow:hidden}
+#dlMini .mb>div{height:100%;background:var(--ac);transition:width var(--t-base) var(--ease-decel)}
+#dlMini .ms{color:var(--text-3);font-family:var(--mono)}
+
+/* En-tete de vue : la rampe Title de Windows 11. */
+#vtitle{display:flex;align-items:baseline;gap:var(--sp-4);flex-wrap:wrap;padding:var(--sp-5) var(--sp-6) var(--sp-3);position:relative;z-index:1}
+#vtName{
+  font-family:var(--font-display);
+  font-size:var(--fs-title-lg);line-height:1.06;font-weight:600;
+  letter-spacing:-.022em;
+}
+#vtSub{color:var(--text-3);font-size:var(--fs-body);padding-bottom:6px}
+
+main{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;position:relative;z-index:1}
+.view{flex:1;overflow:auto;padding:var(--sp-4) var(--sp-6) var(--sp-6);display:none}
+/* Chaque vue ENTRE en glissant legerement — le meme DrillIn que Windows 11,
+   bref et amorti. L'animation est liee a `.active` : elle ne joue qu'a
+   l'apparition, jamais pendant le defilement. */
+.view.active{display:block;animation:view-in var(--t-base) var(--ease-decel)}
+@keyframes view-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.toolbar{display:flex;gap:var(--sp-2);align-items:center;margin-bottom:var(--sp-4);flex-wrap:wrap}
+.tb-tools{display:flex;align-items:center;gap:var(--sp-1);padding-left:var(--sp-3);border-left:1px solid var(--stroke-secondary)}
+.tb-filters{margin-left:auto;display:flex;align-items:center;gap:var(--sp-2)}
+.status{color:var(--text-3);font-size:var(--fs-caption);margin-left:auto}
+
+/* ==========================================================================
+   4. CONTROLES — Fluent 2
+   ========================================================================== */
+select,input[type=text]{
+  background:var(--fill-default);
+  color:var(--text-1);
+  border:1px solid var(--stroke-default);
+  border-bottom-color:var(--stroke-strong);   /* Win11 : le filet bas est plus marque */
+  border-radius:var(--r-control);
+  padding:6px 14px;font-size:var(--fs-body);font-family:inherit;outline:none;
+  transition:background-color var(--t-fast) var(--ease-decel),border-color var(--t-fast) var(--ease-decel);
+}
+select:hover,input[type=text]:hover{background:var(--fill-secondary)}
+select:focus,input[type=text]:focus{background:var(--fill-tertiary);border-bottom-color:var(--ac);border-bottom-width:2px;padding-bottom:5px}
+
+/* Bouton standard : remplissage translucide et filet, jamais d'aplat au repos. */
+button.btn{
+  background:var(--fill-default);color:var(--text-1);
+  border:1px solid var(--stroke-default);border-bottom-color:var(--stroke-strong);
+  border-radius:var(--r-control);
+  padding:6px 14px;font-size:var(--fs-body);font-family:inherit;font-weight:400;
+  cursor:pointer;
+  transition:background-color var(--t-fast) var(--ease-decel),border-color var(--t-fast) var(--ease-decel);
+}
+button.btn:hover{background:var(--fill-secondary)}
+/* Appui : Windows 11 assombrit le remplissage et retire le filet bas.
+   L'ENCRE NE CHANGE PAS, et c'est une CORRECTION, pas un choix. Cette regle
+   faisait passer TOUS les boutons a `--text-2`, deux degats mesures :
+     - le bouton d'ACCENT portait alors du blanc a 77 % sur son propre vert, soit
+       1,8:1 — le bouton d'action principal devenait illisible pendant l'appui ;
+     - un bouton ROUGE cessait d'etre rouge des qu'on appuyait dessus : la couleur
+       qui dit « ceci supprime » disparaissait au moment precis ou l'on agit.
+   Et le remplissage etait ecrase par `--fill-subtle` : un bouton teinte devenait
+   gris. Chaque variante porte donc son propre appui, plus bas. */
+button.btn:active{background:var(--fill-subtle);border-bottom-color:var(--stroke-default)}
+/* Bouton d'accent : le seul aplat plein de l'interface. */
+button.btn.accent{background:var(--ac);color:var(--ac-ink);border-color:#0000001a;font-weight:600}
+button.btn.accent:hover{background:var(--ac-hover)}
+button.btn.accent:active{background:var(--ac-pressed);border-color:#00000033}
+button.btn.gray{background:var(--fill-default);color:var(--text-2)}
+button.btn.gray:hover{background:var(--fill-secondary);color:var(--text-1)}
+/* Boutons teintes : l'appui RETIRE de la teinte (16 % -> 10 %) au lieu de la
+   remplacer. Dans un theme sombre, appuyer assombrit — c'est aussi ce que fait
+   le bouton standard, dont l'appui (3,5 %) est plus sombre que le repos (5 %). */
+button.btn.red{background:var(--danger-fill);color:var(--danger);border-color:#e0525259}
+button.btn.red:hover{background:#e0525240}
+button.btn.red:active{background:#e052521a}
+
+button.btn.blue{background:var(--info-fill);color:var(--info);border-color:#60cdff59}
+button.btn.blue:hover{background:#60cdff40}
+button.btn.blue:active{background:#60cdff1a}
+button.btn.orange{background:var(--warn-fill);color:var(--warn);border-color:#e8b33d59}
+button.btn.orange:hover{background:#e8b33d40}
+button.btn.orange:active{background:#e8b33d1a}
+/* Bouton discret : present, sans reclamer le regard — mais ACTIF. Il portait
+   `--text-3`, l'encre des legendes : les actions de ligne (Telecharger, Recevoir,
+   Supprimer, Installer) avaient donc l'air d'annotations plutot que de boutons.
+   PIEGE DE CASCADE, mesure : `.actionbar .btn{color:var(--text-2)}` demandait deja
+   l'encre secondaire pour ces boutons, et ne s'appliquait JAMAIS — `button.btn.quiet`
+   (0,2,1) l'emporte sur `.actionbar .btn` (0,2,0). L'intention de l'auteur etait
+   bonne ; une regle plus specifique la rendait muette en silence. */
+button.btn.quiet{background:transparent;border-color:transparent;color:var(--text-2)}
+button.btn.quiet:hover{background:var(--fill-subtle);color:var(--text-1)}
+button.btn.quiet.on{background:var(--ac-fill);color:var(--ac);border-color:var(--ac-stroke)}
+/* Un bouton discret ACTIF est un etat, pas un survol : l'appui ne doit pas lui
+   retirer son accent, sinon le bouton cesse de dire qu'il est engage. */
+button.btn.quiet.on:active{background:var(--ac-fill);border-color:var(--ac-stroke)}
+
+/* Anneau de focus Windows 11 : deux tons, pour rester visible sur n'importe quel
+   fond — c'est la raison de sa forme. */
+button:focus-visible,input:focus-visible,select:focus-visible,[tabindex="0"]:focus-visible{
+  outline:2px solid var(--text-1);outline-offset:1px;
+  box-shadow:0 0 0 4px #000000a6;
+}
+
+/* ==========================================================================
+   5. BIBLIOTHEQUE
+   ========================================================================== */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:var(--sp-4)}
+
+/* Tuile de jeu : une carte Fluent qui laisse voir la jaquette, avec l'elevation
+   qui monte d'un cran au survol plutot qu'une mise a l'echelle. */
+.card{
+  position:relative;border-radius:var(--r-overlay);overflow:hidden;cursor:pointer;
+  background:var(--bg-card);
+  border:1px solid var(--stroke-secondary);
+  box-shadow:var(--el-1);
+  transition:box-shadow var(--t-base) var(--ease-decel),border-color var(--t-base) var(--ease-decel),transform var(--t-base) var(--ease-decel);
+}
+.card:hover{box-shadow:var(--el-3);border-color:var(--stroke-default);transform:translateY(-2px);z-index:3}
+.card.sel{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac),var(--el-2)}
+.card .cov{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;background:#00000040;transition:transform var(--t-slow) var(--ease-decel)}
+/* Au survol, la carte se souleve ET la jaquette se rapproche : le zoom est
+   borne par `overflow:hidden` de la carte, il ne pousse rien autour. */
+.card:hover .cov{transform:scale(1.05)}
+.card .nocov{
+  width:100%;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;
+  background:var(--fill-subtle);
+  color:var(--text-disabled);font-family:var(--font-display);font-size:var(--fs-title-lg);font-weight:600;
+}
+.card .info{
+  position:absolute;left:0;right:0;bottom:0;padding:26px 10px 10px;
+  background:linear-gradient(180deg,transparent,#0a0b07cc 45%,#0a0b07f2);
+}
+.card .name{font-size:var(--fs-caption);line-height:var(--lh-caption);font-weight:600;max-height:32px;overflow:hidden}
+.card .meta{display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-size:var(--fs-caption);color:var(--text-2)}
+.card.wait{opacity:.5}
+
+/* Pastilles : Fluent les veut arrondies, discretes, et toujours doublees d'un
+   libelle — la couleur seule ne dit rien a tout le monde. */
+.badge{
+  display:inline-flex;align-items:center;
+  font-size:var(--fs-caption);font-weight:600;padding:2px 8px;border-radius:var(--r-pill);
+  letter-spacing:.02em;text-transform:uppercase;
+  border:1px solid var(--stroke-default);color:var(--text-2);background:var(--fill-subtle);
+  white-space:nowrap;
+}
+.badge.god{color:var(--info);border-color:#60cdff45;background:var(--info-fill)}
+.badge.ext{color:var(--ac);border-color:var(--ac-stroke);background:var(--ac-fill)}
+.badge.con{color:#c9a6ff;border-color:#c9a6ff45;background:#c9a6ff26}
+.badge.wait{color:var(--warn);border-color:#e8b33d45;background:var(--warn-fill)}
+.badge.err{color:var(--danger);border-color:#e0525245;background:var(--danger-fill)}
+
+/* Liste : des lignes, pas des cartes. Win11 fait ca avec un ListView. */
+.liblist{display:flex;flex-direction:column;gap:2px}
+.lrow{
+  display:flex;align-items:center;gap:var(--sp-3);
+  padding:6px 14px;border-radius:var(--r-control);cursor:pointer;
+  transition:background-color var(--t-fast) var(--ease-decel);
+}
+.lrow:hover{background:var(--fill-subtle)}
+.lrow.sel{background:var(--ac-fill)}
+.lrow img{width:30px;height:40px;object-fit:cover;border-radius:var(--r-control);background:#00000040}
+.lrow .lname{flex:1;min-width:0;font-weight:600;font-size:var(--fs-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .ldim{color:var(--text-3);font-size:var(--fs-caption);font-family:var(--mono)}
+
+/* --- Scripts Aurora ------------------------------------------------------
+   Une ligne = un script, sa description, et sa destination sur la console.
+   La DESCRIPTION est ce qui permet de choisir : un titre seul (« DBCleaner »,
+   « XefuSpoofer ») ne dit rien a personne. La destination est en chasse fixe,
+   parce que c'est un chemin qu'on verifie caractere par caractere. */
+.asrow{align-items:flex-start;padding:var(--sp-3)}
+.asico{display:flex;align-items:center;justify-content:center;width:34px;height:34px;flex:0 0 34px;
+  border-radius:var(--r-control);background:var(--ac-fill);color:var(--ac)}
+.asico svg{width:18px;height:18px;display:block}
+.asbody{flex:1;min-width:0}
+.astop{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+  font-weight:600;font-size:var(--fs-body)}
+.asdesc{color:var(--text-3);font-size:var(--fs-caption);line-height:var(--lh-caption);margin-top:2px}
+.aspath{font-family:var(--mono);opacity:.75}
+/* Le bouton reste VISIBLE. Le masquer jusqu'au survol semblait elegant, mais a la
+   manette il n'y a pas de survol : l'action unique de la ligne devenait
+   invisible. Sur 38 lignes, un bouton discret se lit tres bien. */
+.asrow .ca{flex:0 0 auto}
+
+/* --- Accueil : conseils et actions rapides --------------------------------
+   Les conseils etaient des LIGNES : le texte a gauche, le bouton a l'autre bout
+   d'un vide de 1300 px, et l'oeil devait traverser le desert pour aller de l'un
+   a l'autre. En CARTES sur deux colonnes, chaque conseil est un bloc qu'on lit
+   d'un coup, et la largeur est occupee au lieu d'etre laissee vide. */
+.advgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3)}
+.advcard{display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);
+  background:var(--bg-card);border:1px solid var(--stroke-default);border-radius:var(--r-overlay);
+  transition:background-color var(--t-fast) var(--ease-decel),border-color var(--t-fast) var(--ease-decel)}
+.advcard:hover{background:var(--bg-card-hover);border-color:var(--stroke-strong)}
+.advico{flex:0 0 auto;font-weight:700;width:16px;text-align:center;line-height:var(--lh-body)}
+.advbody{flex:1;min-width:0}
+.advtitre{font-weight:600;font-size:var(--fs-body);line-height:var(--lh-body)}
+.advdet{color:var(--text-3);font-size:var(--fs-caption);line-height:var(--lh-caption);margin-top:2px}
+.advact{flex:0 0 auto;align-self:center}
+
+/* LE PLI — la queue d'une liste longue se replie dans un <details> : le resumé
+   est une ligne discrete, pas une carte de plus. Les erreurs ne se replient
+   jamais (le code en decide), ici on ne fait que styler la bascule. */
+details.fold{grid-column:1/-1;margin:0}
+details.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:var(--sp-2);
+  padding:var(--sp-2) var(--sp-4);min-height:var(--h-control);
+  color:var(--text-2);font-size:var(--fs-caption);letter-spacing:.08em;text-transform:uppercase;
+  background:var(--fill-default);border:1px solid var(--stroke-default);border-radius:var(--r-control)}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:'▸';color:var(--text-3);transition:transform var(--t-fast) var(--ease-decel)}
+details.fold[open]>summary::before{transform:rotate(90deg)}
+details.fold>summary:hover{background:var(--bg-card-hover);color:var(--text-1)}
+details.fold>summary:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.fold-in{margin-top:var(--sp-2)}
+/* Une FAMILLE de diagnostics : une ligne qui porte la severite maximale, les
+   cartes restent dedans avec leurs actions — rien de perdu, rien d'affiche. */
+details.fold.fam>summary{letter-spacing:0;text-transform:none;font-size:var(--fs-body)}
+details.fold.fam>summary .famic{flex:0 0 auto;width:16px;text-align:center}
+details.fold.fam>summary .famn{margin-left:auto;color:var(--text-3);font-weight:400}
+/* La SYNTHESE du tableau de bord : les nombres restent lisibles sans devenir
+   des cartes de poids egal — les jaquettes passent avant les compteurs. */
+.dashsum{display:flex;align-items:baseline;gap:var(--sp-2);flex-wrap:wrap;
+  color:var(--text-3);font-size:var(--fs-body);padding-block:var(--sp-1)}
+.dashsum b{color:var(--text-1);font-weight:600}
+.dashsum .sep{opacity:.45}
+/* Le DEPOT resume : combien, quel poids, et l'action — la liste est repliee. */
+.depotsum{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-4);
+  min-height:var(--h-control);background:var(--fill-default);
+  border:1px solid var(--stroke-default);border-radius:var(--r-control)}
+.depotsum .ds-num{font-size:var(--fs-subtitle);font-weight:600;color:var(--text-1)}
+.depotsum .ds-info{flex:1;min-width:0;color:var(--text-2);font-size:var(--fs-body)}
+
+/* Les actions rapides en TUILES de largeur egale : trois boutons colles a gauche
+   laissaient la moitie droite de l'ecran vide. Six tuiles decrivent en plus ce
+   que fait chaque section — une barre de boutons ne dit rien a un nouvel
+   arrivant. */
+.quickgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-3)}
+.qbtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:var(--sp-3) var(--sp-4);text-align:left;cursor:pointer;
+  background:var(--bg-card);border:1px solid var(--stroke-default);border-radius:var(--r-overlay);
+  color:var(--text-2);font-family:var(--font);
+  transition:background-color var(--t-fast) var(--ease-decel),border-color var(--t-fast) var(--ease-decel),transform var(--t-fast) var(--ease-decel)}
+.qbtn:hover{background:var(--bg-card-hover);border-color:var(--ac-stroke);transform:translateY(-2px)}
+.qbtn .qi{color:var(--ac);display:flex;margin-bottom:var(--sp-2)}
+.qbtn .qi svg{width:20px;height:20px;display:block}
+.qbtn .qt{font-size:var(--fs-caption);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-1)}
+.qbtn .qd{font-size:var(--fs-caption);line-height:var(--lh-caption);color:var(--text-3)}
+@media (max-width:1200px){
+  .advgrid,.quickgrid{grid-template-columns:1fr}
+}
+
+/* Reglages en « groupes plats » (design retenu) : une carte mate par theme, des
+   lignes a cheveux — le libelle et son pourquoi a gauche, le controle a droite.
+   L'interrupteur `.sw` remplace la case : la piste `.tr` garde 38x20, le label
+   porte la cible tactile. */
+.quickgrid.quatre{grid-template-columns:repeat(4,minmax(0,1fr))}
+.cfgcard{background:var(--bg-card);border:1px solid var(--stroke-default);border-radius:var(--r-overlay);overflow:hidden}
+.srl{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4)}
+.srl+.srl{border-top:1px solid var(--stroke-secondary)}
+.srl .lb{flex:0 0 200px}
+.srl .lb b{display:block;font-size:var(--fs-caption);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
+.srl .lb span{display:block;color:var(--text-3);font-size:var(--fs-caption);margin-top:2px}
+.srl .ctl{flex:1;display:flex;align-items:center;gap:var(--sp-2);min-width:0}
+.srl .ctl input[type=text]{flex:1;min-width:0;font-family:var(--mono)}
+.srl .ctl .cfgnum{flex:0 0 76px}
+.code-appair{font:700 15px var(--mono);letter-spacing:.35em;color:var(--warn)}
+.sw{position:relative;display:inline-flex;align-items:center;cursor:pointer;flex:0 0 auto}
+.sw input{position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:pointer}
+.sw .tr{width:38px;height:20px;border-radius:99px;background:#ffffff14;position:relative;transition:background-color var(--t-fast)}
+.sw .tr i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--text-3);transition:left var(--t-fast),background-color var(--t-fast)}
+.sw input:checked+.tr{background:var(--ac-stroke)}
+.sw input:checked+.tr i{left:20px;background:var(--ac)}
+@media (max-width:1200px){
+  .quickgrid.quatre{grid-template-columns:1fr}
+}
+
+/* Coverflow : la signature d'Aurora. Le reflet ancre les pochettes dans
+   l'espace — c'est le seul effet purement decoratif du projet. */
+#v-lib.active{display:flex;flex-direction:column;overflow:hidden}
+#v-lib #grid{flex:1;overflow:auto;align-content:start}
+#flowWrap{flex:1;min-height:0;position:relative;overflow:hidden}
+#flowBg{display:none}
+#flow{
+  position:absolute;inset:0;display:flex;align-items:center;gap:var(--sp-5);
+  overflow-x:auto;overflow-y:hidden;padding:0 calc(50% - 104px);
+  perspective:1200px;
+}
+#flow::-webkit-scrollbar{height:8px}
+.fcard{flex:0 0 auto;width:180px;cursor:pointer;transform-style:preserve-3d;transition:transform var(--t-slow) var(--ease-decel);position:relative}
+.fcard .cov,.fcard .nocov{
+  width:100%;aspect-ratio:3/4;border-radius:var(--r-overlay);
+  box-shadow:var(--el-4);
+  -webkit-box-reflect:below 6px linear-gradient(transparent 64%,#0000004d);
+}
+.fcard .cov{object-fit:cover;display:block;background:#00000040;border:1px solid var(--stroke-default)}
+.fcard .nocov{display:flex;align-items:center;justify-content:center;color:var(--text-disabled);font-family:var(--font-display);font-size:var(--fs-title-lg);font-weight:600;background:var(--fill-subtle);border:1px solid var(--stroke-default)}
+.fcard.cur .cov,.fcard.cur .nocov{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac),var(--el-4)}
+#flowName{
+  position:absolute;left:0;right:0;bottom:var(--sp-4);text-align:center;
+  font-family:var(--font-display);font-size:var(--fs-subtitle);line-height:var(--lh-subtitle);font-weight:600;
+  text-shadow:0 2px 16px #000,0 0 40px #000;pointer-events:none;z-index:2;
+}
+#flowName small{color:var(--text-2);font-weight:400;font-size:var(--fs-body)}
+/* Le TITRE EN FILIGRANE, derriere la rangee de jaquettes.
+   Le coverflow centre ses pochettes : au-dessus d'elles restait un grand vide
+   noir. Le nom du jeu l'occupe — enorme, presque efface — et l'ecran dit enfin
+   OU l'on est, sans ajouter un seul bloc d'interface. */
+#flowGhost{
+  position:absolute;left:0;right:0;top:2%;z-index:0;pointer-events:none;
+  font-family:var(--font-display);font-weight:600;letter-spacing:.06em;
+  font-size:clamp(48px,7.4vw,132px);line-height:1;
+  text-align:center;text-transform:uppercase;white-space:nowrap;overflow:hidden;
+  color:#ffffff14;
+  -webkit-mask-image:linear-gradient(180deg,#000 8%,#00000000 92%);
+  mask-image:linear-gradient(180deg,#000 8%,#00000000 92%);
+  transition:opacity var(--t-slow) var(--ease-decel);
+}
+/* La fiche du jeu mis en avant : titre, puis ce qu'on doit savoir sans rien
+   ouvrir. Aurora fait exactement cela sous la jaquette selectionnee. */
+#flowName .fn-t{
+  font-family:var(--font-display);font-size:var(--fs-subtitle);line-height:var(--lh-subtitle);
+  font-weight:600;text-shadow:0 2px 16px #000,0 0 40px #000;
+}
+#flowName .fn-b{
+  display:flex;flex-wrap:wrap;gap:var(--sp-2);justify-content:center;align-items:center;
+  margin-top:var(--sp-3);
+}
+#flowName .fn-b .badge{text-shadow:none;box-shadow:0 2px 12px #000000a6}
+.badge.mono{font-family:var(--mono);letter-spacing:.4px}
+
+/* ── Canaux : la bibliothèque en rangées horizontales, façon NXE.
+   Chaque type de contenu est un canal ; la rangée défile a l'interieur,
+   jamais la page. */
+#chan{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:var(--sp-6);padding-bottom:var(--sp-3)}
+.chan{display:flex;flex-direction:column}
+.chanhead{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-2)}
+/* La pastille est MATE, comme sur le design : teinte translucide + filet,
+   fini le vernis glossy du dashboard 2008. */
+.chbadge{
+  flex:0 0 auto;
+  font-family:var(--font-display);font-size:var(--fs-caption);font-weight:700;letter-spacing:.1em;
+  padding:4px 10px;border-radius:999px;border:1px solid transparent;
+}
+.chbadge.x360{background:#9ede2f1c;color:var(--ac);border-color:#9ede2f44}
+.chbadge.arcade{background:#e8b33d1c;color:var(--warn);border-color:#e8b33d44}
+.chbadge.xbox1{background:#8a907a1c;color:#a8b090;border-color:#8a907a44}
+.chbadge.depot{background:#ffd54a1c;color:#ffd54a;border-color:#ffd54a44}
+.chbadge.residu{background:#9a86e01c;color:#b0a0ea;border-color:#9a86e044}
+.chcount{color:var(--text-2);font-size:var(--fs-caption);white-space:nowrap}
+.chall{
+  margin-left:auto;background:none;border:0;cursor:pointer;color:var(--ac);
+  font:inherit;font-size:var(--fs-caption);letter-spacing:.12em;white-space:nowrap;
+  min-height:var(--h-control);padding-inline:var(--sp-2);border-radius:var(--r-control);
+}
+.chall:hover{text-decoration:underline}
+.chrow{
+  display:flex;gap:var(--sp-4);overflow-x:auto;overflow-y:hidden;
+  padding:2px 2px var(--sp-3);scrollbar-width:thin;
+}
+.chrow.open{flex-wrap:wrap;overflow:visible}
+.ccard{flex:0 0 auto;width:132px;cursor:pointer;border-radius:var(--r-overlay);outline-offset:2px}
+.ccard:focus-visible{outline:2px solid var(--ac)}
+.ccov,.ccovph{
+  width:100%;aspect-ratio:3/4;display:block;object-fit:cover;
+  border-radius:var(--r-overlay);border:1px solid var(--stroke-default);
+  background:#00000040;box-shadow:var(--el-1);
+  transition:transform var(--t-base) var(--ease-decel),border-color var(--t-base) var(--ease-decel);
+}
+.ccard:hover .ccov,.ccard:hover .ccovph{transform:translateY(-2px);border-color:var(--stroke-strong)}
+.ccard.sel .ccov,.ccard.sel .ccovph{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac)}
+.ccovph{
+  display:flex;align-items:center;justify-content:center;color:var(--text-disabled);
+  font-family:var(--font-display);font-size:var(--fs-title-lg);font-weight:600;
+  background:var(--fill-subtle);
+}
+.ccovph.dep{border-style:dashed;border-color:var(--warn);color:var(--warn);background:var(--warn-fill)}
+.cnm{
+  font-size:var(--fs-caption);line-height:var(--lh-caption);font-weight:600;margin-top:6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.cmeta{display:flex;align-items:center;gap:5px;margin-top:4px;font-size:var(--fs-caption);color:var(--text-2);flex-wrap:wrap}
+/* La tuile de fin : « +N tout voir », meme gesture que le lien d'en-tete. */
+.ccard.more{
+  align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  border:1px dashed var(--stroke-default);border-radius:var(--r-overlay);color:var(--text-2);text-align:center;
+}
+.ccard.more:hover{border-color:var(--ac);color:var(--text-1)}
+.ccard.more b{font-family:var(--font-display);font-size:var(--fs-title);color:var(--ac)}
+.ccard.more span{font-size:var(--fs-caption);letter-spacing:.08em}
+.chrow.open .more{display:none}
+
+/* Barre d'actions et glyphes manette : l'apport d'Aurora. */
+.actionbar{display:flex;gap:var(--sp-1);align-items:center}
+.actionbar .btn{background:transparent;border-color:transparent;color:var(--text-2);font-size:var(--fs-caption);padding:4px 10px}
+.actionbar .btn:hover{background:var(--fill-subtle);color:var(--text-1)}
+.actionbar .btn.red{color:var(--danger)}
+.actionbar .btn.orange{color:var(--warn)}
+.gh{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:17px;height:17px;border-radius:50%;
+  font-size:var(--fs-caption);font-weight:700;color:#fff;margin-right:5px;text-shadow:0 1px 2px #00000080;
+}
+.gh.a{background:#2e9e44}.gh.b{background:#c23a3a}.gh.x{background:#2f6fd0}.gh.y{background:#d0a018}
+/* Pastille de touche de MANETTE : plus large, parce qu'un libelle comme « LB/RB »
+   ne tient pas dans un cercle, et grisee tant qu'aucune manette n'est branchee. */
+.gh.pad{width:auto;min-width:17px;height:17px;padding:0 6px;border-radius:var(--r-pill);
+  background:#2a2d22;border:1px solid var(--stroke-strong);color:var(--text-2);text-shadow:none}
+body.padon .gh.pad{background:#2f6fd0;border-color:#4a8ae0;color:#fff}
+/* Ou en est-on du peripherique : un point, vert quand une manette repond. */
+.ctlp{display:inline-flex;align-items:center;gap:6px;margin-right:var(--sp-3);
+  text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.ctlp .dot{width:7px;height:7px;border-radius:50%;background:#4a4f40;box-shadow:0 0 0 1px #ffffff1f inset}
+.ctlp.vivant{color:var(--ac)}
+.ctlp.vivant .dot{background:var(--ac);box-shadow:0 0 6px var(--ac-glow)}
+/* SOUS LA MANETTE, LE FOCUS DEVIENT L'UNIQUE REPERE : il doit donc se voir de
+   loin, sur un ecran de television. L'anneau Fluent est trop discret a 3 metres. */
+body.padon [tabindex="0"]:focus,body.padon button:focus,body.padon .card:focus,body.padon .lrow:focus{
+  outline:2px solid var(--ac);outline-offset:2px;
+  box-shadow:0 0 0 6px var(--ac-fill),0 0 22px var(--ac-glow);
+}
+
+/* ==========================================================================
+   6. TABLEAUX — un ListView Fluent, pas une grille encadree
+   ========================================================================== */
+table{width:100%;border-collapse:collapse}
+th{
+  color:var(--text-3);font-size:var(--fs-caption);line-height:var(--lh-caption);text-align:left;
+  padding:var(--sp-2) var(--sp-3);font-weight:600;
+  border-bottom:1px solid var(--stroke-default);
+}
+/* L'en-tete RESTE : une table qui s'allonge sur cinq ecrans doit continuer a
+   nommer ses colonnes au fond du defilement — c'est le comportement du
+   ListView de Windows 11. Fond OPAQUE, pas d'acrylique : sous un en-tete de
+   40 px le flou ne se voit pas, et chaque `backdrop-filter` coute une passe
+   de composition (le test de fluidite les plafonne a 12). */
+thead th{position:sticky;top:0;z-index:2;background:#161910}
+td{padding:9px var(--sp-3);font-size:var(--fs-body);border-bottom:1px solid var(--stroke-secondary);cursor:pointer;
+  transition:background-color var(--t-fast) var(--ease-decel),box-shadow var(--t-fast) var(--ease-decel)}
+/* Un nom de fichier long n'offre aucune occasion de se couper : il elargit le
+   tableau au-dela de la fenetre et une partie du contenu devient invisible. */
+td,th{overflow-wrap:anywhere}
+/* Largeurs explicites : sans elles le navigateur repartit la largeur et les
+   colonnes se retrouvent a des centaines de pixels les unes des autres. En
+   pourcentage, le groupe des metadonnees se resserre au lieu d'etre repousse au
+   fond a droite par une colonne de titre qui absorbe tout l'espace libre. */
+#v-cat table th:nth-child(1),#v-cat table td:nth-child(1){width:58%}
+#v-cat table th:nth-child(2),#v-cat table td:nth-child(2){width:14%}
+#v-cat table th:nth-child(3),#v-cat table td:nth-child(3){width:14%}
+#v-cat table th:nth-child(4),#v-cat table td:nth-child(4){width:14%}
+#v-hb table th:nth-child(2),#v-hb table td:nth-child(2){width:96px}
+table:has(tbody:empty) thead{display:none}
+tr:hover td{background:var(--fill-default)}
+/* La ligne survolee se marque d'un filet d'accent : sur un tableau large, un
+   fond a 5 % de blanc ne suffit pas a suivre la ligne du regard jusqu'a la
+   colonne d'action, a 900 px du nom. */
+tr.sel td{background:var(--ac-fill)}
+
+/* ==========================================================================
+   7. TELECHARGEMENTS
+   ========================================================================== */
+.dlrow{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-control);font-size:var(--fs-caption);transition:background-color var(--t-fast) var(--ease-decel)}
+.dlrow:hover{background:var(--fill-subtle)}
+.dlrow .nm{flex:1;overflow:hidden;font-weight:600;min-width:0}
+.dlrow .nm .dlerr{font-weight:400;font-size:var(--fs-caption);color:var(--danger);margin-top:3px;word-break:break-word}
+.dlrow .sz{color:var(--text-3);font-family:var(--mono);min-width:60px;text-align:right}
+.dlbtn{padding:4px 10px;font-size:var(--fs-caption)}
+/* FILE CLAIRE (design retenu) : la recherche en barre fine, le depot en
+   pastille a droite, puis la file plate en trois groupes — en cours, en
+   attente, termines. Telechargements et transferts partagent la meme ligne. */
+.acttop{display:flex;gap:var(--sp-2);align-items:stretch;margin-bottom:var(--sp-3)}
+.acttop .store{flex:1;margin-bottom:0}
+.depotpill{
+  display:flex;align-items:center;gap:var(--sp-3);flex:0 0 auto;
+  background:#e8b33d0f;border:1px solid #e8b33d33;border-radius:var(--r-overlay);
+  padding:0 var(--sp-4);font:inherit;font-size:var(--fs-caption);color:var(--warn);cursor:pointer;
+}
+.depotpill:hover{border-color:var(--warn)}
+.depotpill .dpl{font-weight:800;letter-spacing:.12em;font-size:var(--fs-caption)}
+.depotpill b{font-family:var(--mono);font-size:var(--fs-body);font-weight:600}
+.depotpill .dpa{font-weight:700;letter-spacing:.08em;font-size:var(--fs-caption)}
+.fgp{
+  display:flex;align-items:center;gap:var(--sp-2);margin:var(--sp-5) 0 var(--sp-1);
+  font-size:var(--fs-caption);font-weight:800;letter-spacing:.16em;color:var(--text-3);text-transform:uppercase;
+}
+.fgp b{color:var(--text-2);font-family:var(--mono);font-weight:600}
+.frow{display:flex;align-items:center;gap:var(--sp-3);padding:8px 14px;border-radius:var(--r-overlay);font-size:var(--fs-caption)}
+.frow:hover{background:#ffffff08}
+.frow.done{opacity:.55}
+.frow.warn .fbar i{background:var(--warn)}
+.fdir{flex:0 0 26px;height:26px;border-radius:var(--r-control);display:grid;place-items:center;font-size:var(--fs-caption)}
+.fdir.dl{background:var(--ac-fill);color:var(--ac)}
+.fdir.up{background:var(--info-fill);color:var(--info)}
+.fdir.pk{background:#7dd3fc14;color:#7dd3fc}
+.fnm{flex:1;min-width:0}
+.fnm b{display:block;font-weight:600;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fnm>span{display:block;color:var(--text-3);font-size:var(--fs-caption);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbar{height:3px;background:#ffffff1f;border-radius:var(--r-pill);margin-top:6px;overflow:hidden}
+.fbar i{display:block;height:100%;background:var(--ac)}
+.frt{text-align:right;flex:0 0 auto;min-width:96px}
+.fpct{font-family:var(--mono);font-size:var(--fs-body)}
+.fvit{color:var(--text-3);font-size:var(--fs-caption);font-family:var(--mono);white-space:nowrap}
+.fgo{display:flex;gap:var(--sp-1);flex:0 0 auto}
+.fmini{
+  width:30px;height:30px;border-radius:var(--r-control);display:grid;place-items:center;
+  background:#ffffff0a;border:1px solid var(--stroke-default);color:var(--text-2);
+  font:inherit;font-size:var(--fs-caption);cursor:pointer;padding:0;line-height:1;
+}
+.fmini:hover{border-color:var(--ac);color:var(--ac)}
+.fmini.r:hover{border-color:var(--danger);color:var(--danger)}
+/* La barre recherche + pastille depot ne tient pas sur une ligne en dessous de
+   ~720 px : la pastille passe SOUS la recherche, pleine largeur. */
+@media (max-width:720px){
+  .acttop{flex-wrap:wrap}
+  .acttop .store{flex:1 1 100%;min-width:0}
+  .depotpill{flex:1 1 100%;min-height:44px}
+  .depotpill .dpa{margin-left:auto}
+}
+/* La file claire a ses regles de palier dans le bloc canonique de 560 px :
+   un second bloc a la meme condition serait redefini sans le vouloir (le
+   garde-fou des tableaux lit LE premier). */
+.log{
+  background:#0e100acc;border-radius:var(--r-overlay);border:1px solid var(--stroke-secondary);
+  padding:var(--sp-3);font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;
+  color:#8ee6ab;height:180px;overflow:auto;white-space:pre-wrap;
+}
+
+/* ==========================================================================
+   7ter. CONSOLE (FTP)
+   --------------------------------------------------------------------------
+   Deux panneaux : la console d'un cote, ce que le PC peut lui envoyer de
+   l'autre. C'est la disposition d'un gestionnaire de fichiers, et c'est la
+   seule qui rende l'envoi evident — on voit d'ou l'on part et ou l'on va.
+   ========================================================================== */
+/* LE POSTE DE PILOTAGE de la vue Console : le monitor (vue directe XBDM) a
+   gauche, la carte d'identite a droite. Sans XBDM la colonne monitor n'a
+   rien a montrer — .cockpit.solo rend toute la largeur a l'idcard. */
+.cockpit{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:var(--sp-4);margin-bottom:var(--sp-4)}
+.cockpit.solo{grid-template-columns:1fr}
+/* Le monitor : cadre noir 16:9, badge live en haut a gauche, legende en bas.
+   Le badge et la legende flottent SUR l'image comme l'OSD d'un ecran. */
+.conmonitor{
+  position:relative;aspect-ratio:16/9;background:#000;overflow:hidden;
+  border:1px solid var(--stroke-secondary);border-radius:var(--r-overlay);
+}
+.conmonitor img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.conlive-vide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--text-3);font-size:var(--fs-caption);padding:var(--sp-4);
+  text-align:center;max-width:420px;margin-inline:auto;line-height:var(--lh-caption)}
+.mlive{position:absolute;top:var(--sp-3);left:var(--sp-3);display:flex;align-items:center;gap:var(--sp-2);
+  font-family:var(--font-display);font-size:var(--fs-caption);font-weight:600;letter-spacing:.14em;
+  background:#000000b8;border:1px solid var(--stroke-secondary);border-radius:var(--r-control);
+  padding:4px 10px;color:var(--text-1)}
+.mlive i{width:8px;height:8px;border-radius:50%;background:var(--danger);flex:0 0 auto}
+.mlive .minfo{color:var(--text-3);letter-spacing:0;text-transform:none;font-weight:400}
+.mcap{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+  padding:var(--sp-3);background:linear-gradient(0deg,#000000d4,#00000000)}
+.mcap b{font-family:var(--font-display);font-size:var(--fs-subtitle);letter-spacing:.06em;color:var(--text-1);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mcap .dim{font-size:var(--fs-caption);flex:0 0 auto}
+.mcap .mact{margin-left:auto;display:flex;gap:var(--sp-1);flex:0 0 auto}
+.mcap .mact .btn{background:#000000b8}
+/* La carte d'identite : la puce porte la sante (vert/orange/rouge), la
+   premiere ligne nomme la console, les lignes d'etat disent ce que chaque
+   canal donne VRAIMENT — pas de temperature ni d'espace disque inventes. */
+.idcard{
+  display:flex;flex-direction:column;gap:var(--sp-3);
+  background:var(--bg-card);border:1px solid var(--stroke-secondary);
+  border-radius:var(--r-overlay);padding:var(--sp-4);
+}
+.idcard .who{display:flex;align-items:center;gap:var(--sp-3);min-width:0}
+.idcard .who-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.idcard .who-t b{font-size:var(--fs-subtitle);font-weight:600;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Le sous-titre s'enroule plutot que tronquer : « en cours : Aurora » est de
+   l'info, pas du decor — une ellipse la cachait au telephone. */
+.idcard .sub{font-size:var(--fs-caption);color:var(--text-3);overflow-wrap:anywhere}
+.cstat{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-caption);min-width:0}
+.cstat .cs-l{color:var(--text-3);letter-spacing:.1em;flex:0 0 auto}
+.cstat b{font-weight:600;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.csdot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--text-disabled)}
+.csdot.ok{background:var(--ac);box-shadow:0 0 6px var(--ac-glow)}
+.csdot.off{background:var(--warn)}
+.idact{display:flex;gap:var(--sp-1);flex-wrap:wrap;margin-top:auto}
+/* La mini-orbe repete l'etat de la console comme l'orbe du rail : reliee le X
+   vert brille dans son anneau vert, lien partiel l'anneau passe a l'ambre,
+   absente la sphere s'eteint en gris. « Fige » (deux canaux morts) = rouge —
+   la seule couleur reservee a une vraie erreur. */
+/* La boite inclut l'anneau (padding) : un ring peint hors de la boite
+   compte comme debordement pour la sonde. */
+.conorb{position:relative;width:54px;height:54px;padding:5px;flex:0 0 auto}
+.conorb svg{width:100%;height:100%;display:block;
+  filter:drop-shadow(0 0 8px var(--ac-glow));
+  transition:filter var(--t-slow) var(--ease-decel)}
+.conorb::after{content:'';position:absolute;inset:0;border-radius:50%;
+  border:2px solid var(--ac);box-shadow:0 0 10px var(--ac-glow);
+  transition:border-color var(--t-slow) var(--ease-decel),box-shadow var(--t-slow) var(--ease-decel)}
+.idcard.off .conorb svg{filter:grayscale(.85) brightness(.72)}
+.idcard.off .conorb::after{border-color:#e8b33d59;box-shadow:none}
+.idcard.figee .conorb svg{filter:grayscale(.9) brightness(.55)}
+.idcard.figee .conorb::after{border-color:var(--danger);box-shadow:0 0 10px #e0525259}
+/* LES QUATRE PORTES : tuiles d'ancres vers les sections reelles. */
+.conzones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-3);margin-bottom:var(--sp-4)}
+.czone{
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;
+  background:var(--bg-card);border:1px solid var(--stroke-secondary);border-radius:var(--r-overlay);
+  padding:var(--sp-3);cursor:pointer;color:var(--text-1);font:inherit;
+  transition:border-color var(--t-base) var(--ease-decel),transform var(--t-base) var(--ease-decel);
+}
+.czone:hover{border-color:var(--ac);transform:translateY(-2px)}
+.czone:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.czone svg{width:18px;height:18px;color:var(--ac);display:block}
+.czone .cz-t{font-family:var(--font-display);font-size:var(--fs-caption);font-weight:600;letter-spacing:.1em}
+.czone .cz-s{font-size:var(--fs-caption);color:var(--text-3);overflow-wrap:anywhere}
+/* Le canal « contenu installe » : meme langage que la bibliotheque. */
+.chbadge.inst{background:#7dd3fc1c;color:#7dd3fc;border-color:#7dd3fc44}
+.cwrap{position:relative}
+.ccnt{position:absolute;left:6px;bottom:6px;background:#000000c4;border:1px solid var(--stroke-secondary);
+  border-radius:var(--r-control);padding:0 6px;font-size:var(--fs-caption);color:var(--text-1);
+  white-space:nowrap}
+/* Marqueur de panneau : l'icone annonce DE QUOI la liste parle avant les
+   boutons — console d'un cote, PC de l'autre. */
+.conpt{display:flex;align-items:center;color:var(--text-3);flex:0 0 auto}
+.conpt svg{width:15px;height:15px;display:block}
+.ov-foot{display:flex;gap:var(--sp-3);align-items:center;padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--stroke-secondary)}
+/* Les identifiants replies : la zone de connexion ne crie plus quand elle ne
+   sert pas. Le summary est une ligne discrete, le contenu le meme .store. */
+details.store.con-creds{margin-bottom:var(--sp-4)}
+details.store.con-creds>summary{
+  list-style:none;cursor:pointer;color:var(--text-3);font-size:var(--fs-caption);
+  padding:0 2px var(--sp-2);user-select:none;
+}
+details.store.con-creds>summary::-webkit-details-marker{display:none}
+details.store.con-creds>summary::before{content:'▸ ';color:var(--text-3)}
+details.store.con-creds[open]>summary::before{content:'▾ '}
+details.store.con-creds>summary:hover{color:var(--text-1)}
+/* La barre d'identifiants s'enroule : quatre champs a largeur fixe depassaient
+   450 px et coupaient la page au doigt — defaut pre-existant a ce changement,
+   mesure en 390 px. */
+details.store.con-creds .storebar{flex-wrap:wrap}
+/* Puce de volume : un disque se reconnait d'un coup d'oeil dans une liste de
+   dossiers, et son role (« contenu », « jeux ») s'annonce sans CWD. */
+.conrow.cvol .ci{color:var(--info)}
+.conrow .crole{color:var(--text-3);font-size:var(--fs-caption);white-space:nowrap;flex:0 0 auto}
+.conpane{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);align-items:start}
+.conbox{background:var(--bg-card);border:1px solid var(--stroke-secondary);border-radius:var(--r-overlay);overflow:hidden}
+.conhead{display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);border-bottom:1px solid var(--stroke-secondary);background:var(--fill-subtle);min-height:42px}
+.conhead .btn{padding:4px 10px}
+.conhead .btn svg{width:15px;height:15px;display:block}
+/* Le fil d'Ariane defile au lieu de pousser les boutons hors du panneau. */
+.crumb{flex:1;min-width:0;font-family:var(--mono);font-size:var(--fs-caption);color:var(--text-2);overflow-x:auto;white-space:nowrap}
+.conlist{max-height:min(56vh,520px);overflow:auto}
+.conrow{display:flex;align-items:center;gap:var(--sp-3);padding:7px var(--sp-3);border-bottom:1px solid var(--stroke-secondary);font-size:var(--fs-caption);cursor:pointer;transition:background-color var(--t-fast) var(--ease-decel)}
+.conrow:last-child{border-bottom:0}
+.conrow:hover{background:var(--fill-default)}
+.conrow .ci{display:flex;color:var(--text-3);flex:0 0 auto}
+.conrow .ci svg{width:16px;height:16px}
+.conrow.dossier .ci{color:var(--ac)}
+.conrow .cn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-1)}
+.conrow .ct{color:var(--text-3);font-family:var(--mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* L'action de ligne reste devinable au repos : a opacite nulle on ne sait pas
+   qu'il y a quelque chose a faire, et tout le monde ne survole pas. */
+.conrow .ca{display:flex;gap:var(--sp-1);opacity:.45;transition:opacity var(--t-fast) var(--ease-decel)}
+.conrow:hover .ca,.conrow:focus-within .ca{opacity:1}
+.conrow .ca .btn{padding:2px 8px;font-size:var(--fs-caption)}
+.checkline{display:flex;align-items:center;gap:var(--sp-2);color:var(--text-2);font-size:var(--fs-caption);cursor:pointer}
+.checkline input{accent-color:var(--ac);width:14px;height:14px}
+.checkline b{color:var(--text-1);font-weight:600}
+
+/* ==========================================================================
+   8. TITLE UPDATES
+   ========================================================================== */
+.trow{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) 0;border-bottom:1px solid var(--stroke-secondary);font-size:var(--fs-caption)}
+.trow:last-child{border-bottom:0}
+.trow.off{opacity:.4}
+.tver{
+  font-family:var(--mono);font-size:var(--fs-caption);font-weight:700;color:var(--text-1);
+  min-width:40px;text-align:center;
+  background:var(--fill-default);border-radius:var(--r-control);padding:2px 8px;
+}
+.tmid{font-family:var(--mono);color:var(--text-3);font-size:var(--fs-caption);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Le point d'etat est double d'une FORME : plein = actif, creux = ignore. Un
+   daltonien doit pouvoir lire la difference sans distinguer le rouge du vert. */
+.tdot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;border:1px solid transparent}
+.tdot.ok{background:var(--ac)}
+.tdot.ko{background:transparent;box-shadow:inset 0 0 0 2px var(--danger)}
+.midc{
+  display:inline-flex;align-items:center;gap:var(--sp-2);
+  background:var(--ac-fill);border:1px solid var(--ac-stroke);border-radius:var(--r-control);
+  padding:4px 10px;font-family:var(--mono);font-size:var(--fs-caption);color:var(--ac);font-weight:600;
+  margin-bottom:var(--sp-2);
+}
+
+/* ==========================================================================
+   9. CONTENU LIE AUX JEUX + MARKETPLACE
+   ========================================================================== */
+.ctrow{background:var(--bg-card);border:1px solid var(--stroke-secondary);border-radius:var(--r-overlay);margin-bottom:var(--sp-2);overflow:hidden;transition:background-color var(--t-fast) var(--ease-decel)}
+.ctrow:hover{background:var(--bg-card-hover)}
+.cthead{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);cursor:pointer}
+.cthead img{width:30px;height:40px;object-fit:cover;border-radius:var(--r-control);background:#00000040}
+.cthead .ctn{flex:1;min-width:0;font-weight:600;font-size:var(--fs-body)}
+.cthead .ctid{font-family:var(--mono);color:var(--text-3);font-size:var(--fs-caption)}
+.ctsum{display:flex;gap:var(--sp-4);color:var(--text-3);font-size:var(--fs-caption);align-items:center}
+.ctbody{display:none;border-top:1px solid var(--stroke-secondary);padding:var(--sp-4)}
+.ctrow.open .ctbody{display:block}
+.ctbody h4{font-size:var(--fs-caption);color:var(--text-3);margin:var(--sp-3) 0 var(--sp-2);font-weight:600}
+.ctbody h4:first-child{margin-top:0}
+
+/* La carte de recherche ne fait plus qu'une chose : chercher. Les quatre
+   grandes tuiles de source occupaient toute une bande d'ecran pour un choix
+   qu'on fait une fois, et les deux moyens d'ajout manuels (lien, import) y
+   etaient melanges alors que ce sont deux taches sans rapport. */
+.store{background:var(--bg-card);border:1px solid var(--stroke-secondary);border-radius:var(--r-overlay);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-4)}
+.storebar{display:flex;gap:var(--sp-2);align-items:center}
+.storebar input[type=text]{flex:1;padding:8px 14px}
+.srcrow{display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-3);flex-wrap:wrap}
+/* Ce que fait la source choisie : sans cette ligne, « Vimm » et « Archive.org »
+   sont deux mots opaques pour qui ne connait pas les deux sites. */
+.srcnote{color:var(--text-3);font-size:var(--fs-caption);line-height:var(--lh-caption);margin-top:var(--sp-3)}
+
+/* ==========================================================================
+   7bis. COMPOSANTS PARTAGES — Catalogue et Telechargements
+   --------------------------------------------------------------------------
+   Ces deux vues posaient chacune a sa facon les memes questions : des boutons
+   independants qui ne disaient pas qu'ils s'excluaient l'un l'autre, des
+   en-tetes de tableau sans intitule, des comptes sans referentiel, et des
+   sections vides affichees en permanence. Les composants ci-dessous repondent
+   une fois pour les deux.
+   ========================================================================== */
+/* Phrase d'introduction : une vue qui commence par une barre d'outils oblige a
+   deviner ce qu'elle contient. Une ligne d'explication coute 20 px et evite
+   l'essai-erreur. */
+.lead{color:var(--text-2);font-size:var(--fs-body);line-height:1.6;margin-bottom:var(--sp-4);max-width:92ch}
+.lead b{color:var(--text-1);font-weight:600}
+
+/* Controle segmente : la ou quatre boutons separes ne disaient pas qu'ils
+   s'excluaient, un seul cadre porte la selection. Windows 11 marque l'onglet
+   actif par un remplissage plus clair et une elevation, pas par l'accent — un
+   aplat vert ici ferait concurrence au bouton d'action principal. */
+.seg{
+  display:inline-flex;align-items:center;gap:2px;padding:2px;
+  background:var(--fill-subtle);border:1px solid var(--stroke-secondary);border-radius:var(--r-control);
+}
+.seg-i{
+  display:inline-flex;align-items:center;gap:6px;
+  background:transparent;border:1px solid transparent;border-radius:3px;
+  color:var(--text-2);font-family:inherit;font-size:var(--fs-caption);font-weight:600;
+  padding:4px 10px;cursor:pointer;white-space:nowrap;
+  transition:background-color var(--t-fast) var(--ease-decel),color var(--t-fast) var(--ease-decel);
+}
+.seg-i:hover{background:var(--fill-default);color:var(--text-1)}
+.seg-i.on{background:var(--fill-tertiary);border-color:var(--stroke-default);color:var(--text-1);box-shadow:var(--el-1)}
+.seg-i svg{width:15px;height:15px}
+
+/* Conteneur de tableau : sur une fenetre etroite, les dernieres colonnes
+   sortaient de l'ecran sans aucun moyen de les atteindre — le tableau poussait
+   la page au lieu de defiler lui-meme. */
+.tablewrap{overflow-x:auto;margin-bottom:var(--sp-2)}
+.tablewrap table{min-width:620px}
+
+/* Champ qui prend la place restante : une largeur fixe en pixels ignore aussi
+   bien la longueur du texte cherche que la taille de la fenetre. */
+.grow{flex:1;min-width:180px}
+
+/* Section repliable : le journal et les moyens d'ajout servent rarement, mais
+   doivent rester a un clic. Un <details> garde la semantique, le clavier et
+   l'etat ouvert/ferme sans une ligne de JavaScript. */
+.sec-fold{background:var(--bg-card);border:1px solid var(--stroke-secondary);border-radius:var(--r-overlay);margin-bottom:var(--sp-3);overflow:hidden}
+.sec-fold>summary{
+  cursor:pointer;list-style:none;padding:var(--sp-3) var(--sp-4);
+  display:flex;align-items:center;gap:var(--sp-2);
+  font-size:var(--fs-body);font-weight:600;color:var(--text-2);
+}
+.sec-fold>summary::-webkit-details-marker{display:none}
+.sec-fold>summary::before{content:'\25B8';display:inline-block;color:var(--text-3);font-size:var(--fs-caption);transition:transform var(--t-fast) var(--ease-decel)}
+.sec-fold[open]>summary::before{transform:rotate(90deg);color:var(--ac)}
+.sec-fold[open]>summary{color:var(--text-1)}
+.sec-fold>summary:hover{background:var(--fill-subtle);color:var(--text-1)}
+.sec-b{border-top:1px solid var(--stroke-secondary);padding:var(--sp-4)}
+
+/* Ligne « libelle + champ + action » des ajouts manuels. */
+.fieldrow{display:flex;gap:var(--sp-2);align-items:center;margin-bottom:var(--sp-2)}
+.fieldrow:last-of-type{margin-bottom:0}
+.fieldrow input[type=text]{flex:1;font-size:var(--fs-caption);padding:6px 14px}
+.fieldrow .lbl{font-size:var(--fs-caption);font-weight:600;color:var(--text-3);min-width:52px}
+
+/* Cellule qui porte un bloc entier (squelette, etat vide) : sans elle, le
+   rembourrage du tableau s'ajoute a celui du composant et la ligne fait deux
+   fois la hauteur prevue. */
+.tdfill{padding:0;border:0;cursor:default}
+tr:hover td.tdfill{background:transparent}
+
+/* Ligne de catalogue : la jaquette vit DANS la cellule du titre, comme dans un
+   ListView Fluent. Cela supprime la colonne sans intitule qui faisait
+   ressembler le tableau a une page inachevee. */
+.c-game{display:flex;align-items:center;gap:var(--sp-3)}
+/* LA VALEUR DE CETTE CELLULE EST DEUX CHOSES — une jaquette et un nom — et
+   depuis qu'elle est enveloppee dans UN seul element (`.v` : la fiche du
+   telephone ne doit avoir que deux enfants, le libelle et la valeur), c'est
+   `.v` qui porte la rangee. Sans cette regle la jaquette et le nom
+   redeviennent des boites EN LIGNE, alignees sur la ligne de base, et la carte
+   du catalogue change AU BUREAU. */
+.c-game .v{display:flex;align-items:center;gap:var(--sp-3)}
+.c-cov{width:32px;height:44px;object-fit:cover;border-radius:var(--r-control);background:#00000040;flex:0 0 auto}
+.c-nm{font-weight:600;min-width:0}
+.c-tid{font-family:var(--mono);color:var(--ac);white-space:nowrap}
+.c-act{text-align:right;white-space:nowrap}
+/* L'action de ligne est discrete, pas invisible : a --text-3 elle se lisait comme
+   un libelle desactive. La ligne entiere etant cliquable, elle n'a pas besoin de
+   reclamer le regard — juste d'avoir l'air cliquable. */
+.c-act .btn.quiet{color:var(--text-2)}
+/* Ligne d'en-tete d'un groupe (plusieurs regions du meme jeu) : elle se deplie,
+   donc elle se distingue des lignes terminales qu'elle contient. */
+tr.grp td{font-weight:600}
+tr.grp .badge{font-weight:600}
+
+/* Colonnes secondaires serrees contre le bord droit.
+   Le defaut n'etait pas qu'elles soient etalees, mais qu'une valeur courte posee
+   au MILIEU d'une colonne large flotte entre le titre et la source, rattachee a
+   aucun des deux. Alignees a droite, elles forment un seul groupe de metadonnees
+   en face du titre — c'est la disposition d'un ListView. La colonne du titre
+   absorbe le reste, et la ligne se lit de gauche a droite sans trou au milieu. */
+#dlResWrap th:nth-child(2),#dlResWrap td:nth-child(2){width:22%;text-align:right}
+#dlResWrap th:nth-child(3),#dlResWrap td:nth-child(3){width:12%}
+/* Une taille se compare de haut en bas : elle s'aligne a droite, comme dans
+   l'Explorateur. */
+#dlFilesWrap th:nth-child(3),#dlFilesWrap td:nth-child(3){width:12%;text-align:right}
+#dlmT2 th:nth-child(3),#dlmT2 td:nth-child(3){text-align:right}
+#dlmT1 th:nth-child(2),#dlmT1 td:nth-child(2){text-align:right}
+#dlmT1 th:nth-child(3),#dlmT1 td:nth-child(3){text-align:right}
+
+/* ==========================================================================
+   10. TABLEAU DE BORD
+   ========================================================================== */
+h2.sec{
+  font-family:var(--font-display);
+  font-size:var(--fs-subtitle);line-height:var(--lh-subtitle);font-weight:600;
+  margin:var(--sp-5) 0 var(--sp-3);
+  /* Un filet d'accent devant chaque titre de section : c'est ce qui donne a la
+     page son rythme et permet de reperer les sections en faisant defiler — des
+     titres blancs sur fond sombre se ressemblent tous. */
+  display:flex;align-items:center;gap:var(--sp-3);
+}
+h2.sec:first-child{margin-top:0}
+
+/* Ligne de synthese du tableau de bord : le conteneur reste une grille, le
+   contenu est une phrase — les compteurs ne font plus le spectacle. */
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--sp-3);margin-bottom:var(--sp-4)}
+
+/* Bande de jaquettes : UNE rangee qui defile a l'horizontale, comme le
+   carrousel du dashboard. La grille qui retournait a la ligne produisait deux
+   ou trois rangees a moitie remplies — une etagere orpheline. Une rangee est
+   un objet volontaire : elle se parcourt, elle ne s'empile pas. Le fondu du
+   bord droit dit qu'il reste des jaquettes — le defilement muet etait le
+   defaut, pas le defilement. */
+/* Barre masquee : le fondu de bord droit dit deja que le rang continue —
+   comme la bande d'onglets. Une scrollbar de 12 px sous chaque canal volait
+   la hauteur des vignettes. */
+.shelf{display:flex;gap:var(--sp-2);overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding-bottom:var(--sp-2);scrollbar-width:none;mask-image:linear-gradient(90deg,#000 90%,#0000)}
+.shelf::-webkit-scrollbar{display:none}
+.shelf-i{flex:0 0 auto;width:104px;cursor:pointer;scroll-snap-align:start;transition:transform var(--t-base) var(--ease-decel)}
+.shelf-i img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;
+  border-radius:var(--r-overlay);background:var(--bg-card);
+  border:1px solid var(--stroke-secondary);
+  transition:box-shadow var(--t-base) var(--ease-decel)}
+.shelf-i .sn{display:block;font-size:var(--fs-caption);color:var(--text-2);margin-top:5px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shelf-i .s2{display:flex;align-items:center;gap:4px;font-size:var(--fs-caption);
+  color:var(--text-3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shelf-i .s2::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--ac);flex:0 0 auto}
+.shelf-i:hover img{box-shadow:var(--el-2);border-color:var(--stroke-default)}
+.shelf-i:hover{transform:translateY(-2px)}
+
+/* --- LE HEROS — le jeu mis en avant, facade de l'Accueil. Plat et mat,
+   comme le reste : plus de halo vert ni de bandeau geant, une ligne forte. */
+.hero{position:relative;overflow:hidden;border-radius:var(--r-overlay);
+  border:1px solid var(--stroke-secondary);margin-bottom:var(--sp-4);
+  background:var(--bg-card)}
+.hero-in{position:relative;display:flex;align-items:center;gap:var(--sp-5);
+  padding:var(--sp-4) var(--sp-5)}
+.hero-cov{flex:0 0 auto;width:96px;transform:rotate(-2deg)}
+.hero-cov img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:6px;
+  box-shadow:0 10px 28px #0008,inset 0 0 0 1px #ffffff12;display:block}
+.hero-txt{flex:1;min-width:0}
+.hero-eyebrow{font-size:var(--fs-caption);letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ac);margin-bottom:8px}
+.hero-txt h1{font-family:var(--font-display);font-size:var(--fs-title);font-weight:600;letter-spacing:-.01em;
+  line-height:1.25; /* la ligne heritee de body (20px) rognait les glyphes en haut et en bas */
+  padding-block:3px; /* les metriques d'encre de la fonte depassent encore l'em d'1 px */
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hero-meta{display:flex;gap:18px;color:var(--text-2);font-size:var(--fs-body);margin-top:10px}
+.hero-meta b{color:var(--text-1)}
+.hero-act{display:flex;gap:10px;flex:0 0 auto}
+
+/* --- LA STRIP — trois cartes d'etat, pas un mur de destinations --------- */
+.dashstrip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:var(--sp-4) 0}
+.scard{display:flex;flex-direction:column;gap:2px;text-align:left;cursor:pointer;
+  background:var(--bg-card);border:1px solid var(--stroke-default);
+  border-radius:var(--r-overlay);padding:14px 18px;color:var(--text-1);font:inherit;
+  transition:border-color var(--t-base)}
+.scard:hover{border-color:var(--stroke-strong)}
+.sc-t{font-size:var(--fs-caption);letter-spacing:.16em;text-transform:uppercase;color:var(--text-3);font-weight:600}
+.sc-v{font-size:20px;font-weight:600}
+.sc-v.ok{color:var(--ac)}
+.sc-v.warn{color:var(--warn)}
+.sc-s{font-size:var(--fs-caption);color:var(--text-2)}
+.sc-l{font-size:var(--fs-caption);color:var(--ac);margin-top:8px}
+@media (max-width:839px){.dashstrip{grid-template-columns:1fr}
+  .hero-in{flex-wrap:wrap}.hero-act{width:100%}}
+
+/* --- STOCKAGE — barres segmentees : la composition du disque, pas un % ------ */
+.stotot{display:flex;gap:26px;background:var(--bg-card);border:1px solid var(--stroke-default);
+  border-radius:var(--r-overlay);padding:14px 18px;margin:var(--sp-3) 0 var(--sp-1);flex-wrap:wrap}
+.stotot b{font:600 15px var(--mono)}
+.stotot .k{font-size:var(--fs-caption);font-weight:800;letter-spacing:.14em;color:var(--text-3)}
+.stotot .ok{color:var(--ac)}.stotot .warn{color:var(--warn)}
+.stodrv{padding:8px 14px;border-radius:var(--r-overlay)}
+.stodrv:hover{background:var(--fill-subtle)}
+.stodrv .stot{display:flex;align-items:baseline;gap:12px;min-width:0}
+.stodrv .stolt{font:700 15px var(--mono);color:var(--text-1)}
+.stodrv .storo{color:var(--text-2);font-size:var(--fs-caption);font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stofs{font-size:var(--fs-caption);font-weight:800;letter-spacing:.1em;padding:2px 8px;border-radius:99px;flex:0 0 auto}
+.stofs.ok{background:#9ede2f14;color:var(--ac);border:1px solid #9ede2f33}
+.stofs.warn{background:#e8b33d14;color:var(--warn);border:1px solid #e8b33d33}
+.stodrv .stonum{margin-left:auto;font:12px var(--mono);color:var(--text-3);flex:0 0 auto}
+.stodrv .stonum b{color:var(--text-1);font-weight:600}
+.stoseg{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--fill-subtle);margin-top:8px}
+.stoseg .sg{display:block;height:100%}
+.sg-jeux{background:var(--ac)}
+.sg-dlc{background:var(--info)}
+.sg-hb{background:#c9a6ff}
+.sg-depot{background:var(--warn)}
+.sg-autre{background:#ffffff22}
+.stoleg{display:flex;gap:14px;margin:7px 0 4px;font-size:var(--fs-caption);color:var(--text-3);flex-wrap:wrap}
+.stoleg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.stoleg b{color:var(--text-2);font-weight:600;font-family:var(--mono)}
+.stowarn{color:var(--warn);font-size:var(--fs-caption);margin-top:6px}
+.stooff{padding:8px 14px;color:var(--text-3);font-size:var(--fs-body)}
+
+/* --- VUE DIRECTE : les styles du monitor vivent avec le cockpit, plus haut. */
+
+/* ==========================================================================
+   11. PANNEAU DE DETAIL — un volet Fluent
+   ========================================================================== */
+.detail{
+  position:fixed;top:0;right:0;height:100vh;
+  width:min(560px,calc(100vw - 40px));
+  background:#14160f;z-index:50;
+  display:flex;flex-direction:column;
+  border-left:1px solid var(--stroke-default);
+  transform:translateX(102%);
+  transition:transform var(--t-slow) var(--ease-decel),box-shadow var(--t-slow) var(--ease-decel);
+}
+.detail.open{transform:translateX(0);box-shadow:-30px 0 80px #000000cc}
+/* UN VOLET FERME NE DOIT RIEN RECEVOIR. Son fond (`#dpBg`) est un enfant
+   ABSOLU agrandi de 30 % (`scale(1.3)`), donc il deborde du volet — et comme le
+   volet est gare hors de l'ecran par `translateX(102%)`, ce debordement retombe
+   SUR L'ECRAN : 111 px a gauche du volet, soit les 50 derniers pixels de la
+   fenetre en haut comme en bas. Le volet est a `z-index:50`, l'en-tete a 3 : ce
+   fond passait donc AU-DESSUS du bouton de langue et du dernier onglet, sans
+   rien montrer (aucune image tant qu'aucun jeu n'a ete ouvert).
+   TROUVE AU DOIGT, PAS A LA RELECTURE : un vrai tap au centre du bouton de
+   langue (x=344 pour un ecran de 390) tombait sur `#dpBg` — le menu ne s'ouvrait
+   jamais, alors que sa boite, elle, etait bien la et bien mesuree. A la souris
+   le defaut ne se voyait pas : le menu s'ouvre aussi AU SURVOL.
+   `pointer-events` plutot que `overflow:hidden` : on ne change RIEN au dessin du
+   volet, seulement qui peut le toucher quand il est ferme. */
+.detail:not(.open){pointer-events:none}
+/* Le design est PLAT : pas de jaquette floutee derriere la fiche — le fond
+   est le graphite #14160f, la jaquette vit dans l'en-tete. `#dpBg` reste dans
+   le HTML (il sert de cible a `openDetail`), mais il n'affiche plus rien. */
+.detail .dbg{display:none}
+/* LA TETE NE DEFILE PAS : titre, faits et onglets restent visibles pendant
+   qu'on parcourt la liste — c'est ce qui rend la fiche lisible. */
+.detail .dfix{position:relative;z-index:1;padding:var(--sp-5) var(--sp-6) 0;border-bottom:1px solid var(--stroke-default)}
+.detail .dscroll{flex:1;overflow:auto;position:relative;z-index:1;padding:var(--sp-3) var(--sp-6) var(--sp-5)}
+.detail .dtop{display:flex;gap:var(--sp-5);margin-bottom:var(--sp-4);align-items:flex-start}
+/* La jaquette est petite et droite : elle identifie, elle ne fait plus la
+   demonstration. */
+.detail .dcov{
+  display:block;width:82px;height:112px;object-fit:cover;border-radius:var(--r-control);
+  background:#00000040;box-shadow:0 8px 22px #000000aa;flex:0 0 82px;
+}
+.detail .dhead{flex:1;min-width:0}
+/* Le nom du jeu ouvre la fiche : rampe Subtitle, pas le grand titre — la fiche
+   est une carte, pas une page. */
+.detail .dname{
+  font-family:var(--font-display);
+  font-size:var(--fs-subtitle);line-height:1.2;font-weight:600;
+  margin-bottom:var(--sp-2);
+}
+/* Le TitleID est une pastille verte discrete et cliquable — COPIER TID n'a
+   plus besoin d'un bouton dedie. */
+.detail .dtid{
+  display:inline-block;font-family:var(--mono);font-size:var(--fs-caption);
+  color:var(--ac);background:var(--ac-fill);border:1px solid var(--ac-stroke);
+  border-radius:var(--r-control);padding:4px 10px;cursor:pointer;
+}
+.detail .dtid:hover{background:#9ede2f26}
+/* Element copiable (clic = copier l'identifiant) : le pointeur dit que le clic
+   fait quelque chose, et le survol confirme que la pastille est active. */
+.cp{cursor:pointer}
+.cp:hover{border-color:var(--stroke-default)}
+/* Le chemin est du texte, pas une pastille : le design le pose a plat, en
+   mono discret sous le TitleID. */
+.detail .dpath{
+  font-family:var(--mono);font-size:var(--fs-caption);color:var(--text-3);
+  word-break:break-all;margin-top:var(--sp-2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.detail .dpath.dim{white-space:normal}
+/* LA RANGEE DES FAITS : quatre chiffres visibles en un coup d'oeil, sans
+   fouiller dans une liste de lignes. */
+.detail .dfacts{display:grid;grid-template-columns:repeat(4,1fr);margin:0 calc(-1 * var(--sp-6));border-top:1px solid var(--stroke-default)}
+.detail .dfact{padding:var(--sp-3) var(--sp-2);text-align:center;border-right:1px solid var(--stroke-default)}
+.detail .dfact:last-child{border-right:0}
+.detail .dfact b{display:block;font-size:var(--fs-body);font-weight:600;font-variant-numeric:tabular-nums}
+.detail .dfact span{font-size:var(--fs-caption);letter-spacing:.14em;color:var(--text-3);text-transform:uppercase}
+/* LES ONGLETS : un seul jeu de listes, le compteur vit dans l'onglet. */
+.detail .dtabs{display:flex;gap:2px;margin:var(--sp-3) calc(-1 * var(--sp-6)) 0;padding:0 var(--sp-6);border-top:1px solid var(--stroke-default)}
+.detail .dtab{
+  background:none;border:0;border-bottom:2px solid transparent;color:var(--text-3);
+  font:inherit;font-size:var(--fs-caption);font-weight:700;letter-spacing:.1em;
+  padding:8px 14px;cursor:pointer;
+}
+.detail .dtab:hover{color:var(--text-1)}
+.detail .dtab.on{color:var(--text-1);border-color:var(--ac)}
+.detail .dtab .dtn{font-weight:400;color:var(--text-2);font-family:var(--mono);font-size:var(--fs-caption);margin-left:5px}
+/* LA LISTE EST PLATE : pas de carte autour, les lignes respirent sur le
+   graphite de la fiche et le survol seul les souligne — comme le design. */
+.detail .dlist{margin-top:0;font-size:var(--fs-caption);color:var(--text-2)}
+.detail .sec{margin-top:var(--sp-5)}
+.dsub{font-size:var(--fs-caption);font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--text-3);margin:var(--sp-4) 0 var(--sp-1)}
+.dsub:first-child{margin-top:0}
+.ditem{display:flex;align-items:center;gap:var(--sp-2);padding:8px 14px;border-radius:var(--r-overlay);font-size:var(--fs-caption)}
+.ditem:hover{background:#ffffff08}
+.ditem .dn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-1)}
+.ditem .ds{color:var(--text-3);font-family:var(--mono);white-space:nowrap}
+/* Les lignes TU/DLC de la fiche suivent le meme geste plat que .ditem. */
+.detail .trow{gap:var(--sp-2);padding:8px 14px;border-bottom:0;border-radius:var(--r-overlay)}
+.detail .trow:hover{background:#ffffff08}
+.ditem .dx{background:none;border:0;color:var(--text-3);cursor:pointer;font-size:var(--fs-caption);padding:2px 8px;border-radius:var(--r-control);line-height:1;transition:background-color var(--t-fast) var(--ease-decel),color var(--t-fast) var(--ease-decel)}
+.ditem .dx:hover{color:#1a0505;background:var(--danger)}
+.detail .dactions{
+  display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+  padding:var(--sp-3) var(--sp-6);border-top:1px solid var(--stroke-default);
+  background:#ffffff04;
+  position:relative;z-index:1;
+}
+/* Les gestes de la fiche portent le style du design : rayon overlay,
+   capitales espacees, danger en rouge discret plutot qu'en bouton plein. */
+.detail .dactions .btn{border-radius:var(--r-overlay);padding:8px 14px;font-weight:700;letter-spacing:.08em}
+.detail .dactions .btn.red{color:var(--danger);background:var(--danger-fill);border-color:#e0525233}
+/* Le groupe d'icones entre la primaire et le danger : le geste principal est
+   seul a gauche, la suppression est seule a droite — plus de rangee de six
+   boutons indifferencies. */
+.detail .dactions .btn{flex-shrink:0}
+.detail .dgrp{display:flex;gap:var(--sp-1)}
+.detail .dbtn{
+  width:34px;height:34px;border-radius:var(--r-overlay);
+  background:#ffffff0a;border:1px solid var(--stroke-default);
+  color:var(--text-2);font-size:14px;cursor:pointer;line-height:1;
+  transition:border-color var(--t-fast) var(--ease-decel),color var(--t-fast) var(--ease-decel);
+}
+.detail .dbtn:hover{border-color:var(--ac);color:var(--ac)}
+.detail .dp-danger{margin-left:auto}
+.detail .dclose{
+  position:absolute;top:var(--sp-3);right:var(--sp-3);z-index:2;
+  background:none;border:0;color:var(--text-3);
+  width:30px;height:30px;border-radius:var(--r-control);cursor:pointer;
+  transition:color var(--t-fast) var(--ease-decel),background-color var(--t-fast) var(--ease-decel);
+}
+.detail .dclose:hover{background:var(--danger);border-color:transparent;color:#1a0505}
+
+/* ==========================================================================
+   12. ETATS — chargement, vide, aide
+   Un produit se juge sur ce qu'il montre QUAND IL N'A RIEN A MONTRER.
+   ========================================================================== */
+.skel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:var(--sp-4)}
+.skel-card{aspect-ratio:3/4;border-radius:var(--r-overlay);background:var(--fill-subtle);position:relative;overflow:hidden}
+.skel-rows{display:flex;flex-direction:column;gap:var(--sp-2)}
+.skel-row{height:36px;border-radius:var(--r-control);background:var(--fill-subtle);position:relative;overflow:hidden}
+.skel-card::after,.skel-row::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,#ffffff0f,transparent);
+  animation:skel 1.6s var(--ease-decel) infinite;
+}
+@keyframes skel{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+.empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--sp-3);text-align:center;padding:var(--sp-7) var(--sp-5);color:var(--text-3);
+}
+.empty-i{color:var(--text-disabled);display:flex}
+.empty-i svg{width:32px;height:32px}
+.empty-t{font-family:var(--font-display);font-size:var(--fs-subtitle);line-height:var(--lh-subtitle);font-weight:600;color:var(--text-2)}
+.empty-h{font-size:var(--fs-body);max-width:46ch}
+.empty .btn{margin-top:var(--sp-2)}
+
+.kbd{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:22px;height:22px;padding:0 6px;
+  background:var(--fill-default);border:1px solid var(--stroke-default);border-bottom-color:var(--stroke-strong);
+  border-radius:var(--r-control);
+  font-family:var(--mono);font-size:var(--fs-caption);font-weight:600;color:var(--text-2);
+}
+#helpModal .help-row{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-2) 0;border-bottom:1px solid var(--stroke-secondary);font-size:var(--fs-body)}
+#helpModal .help-row:last-child{border-bottom:0}
+#helpModal .help-row span:last-child{margin-left:auto;color:var(--text-3);text-align:right}
+#helpModal .help-t{display:flex;gap:var(--sp-1);flex:none}
+
+/* ==========================================================================
+   13. NOTIFICATIONS, MODALES, DEPOT
+   ========================================================================== */
+#toasts{position:fixed;bottom:var(--sp-5);right:var(--sp-5);z-index:99;display:flex;flex-direction:column;gap:var(--sp-2)}
+.toast{
+  background:var(--bg-flyout);border:1px solid var(--stroke-default);
+  padding:var(--sp-3) var(--sp-4);border-radius:var(--r-overlay);font-size:var(--fs-body);
+  box-shadow:var(--el-3);animation:toast-in var(--t-base) var(--ease-decel);max-width:380px;
+}
+@keyframes toast-in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+
+#dropzone{
+  position:fixed;inset:0;z-index:80;display:none;
+  align-items:center;justify-content:center;flex-direction:column;gap:var(--sp-3);
+  background:#14160feb;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:inset 0 0 0 2px var(--ac);
+}
+#dropzone.on{display:flex}
+#dropzone .big{font-family:var(--font-display);font-size:var(--fs-title);font-weight:600;color:var(--ac)}
+#dropzone .sm{color:var(--text-3);font-size:var(--fs-body)}
+
+/* LE VOILE DE MODALE NE FLOUTE PLUS. Dans Windows 11, la couche qui se pose
+   derriere une boite de dialogue est une FUMEE : elle assombrit, elle ne floute
+   pas — le flou appartient au panneau, qui est en acrylique. Le garder ici
+   faisait deux choses de travers : on floutait deux fois la meme chose (4 px sur
+   le voile, 40 sur le panneau), et le voile etait si sombre (70 a 86 % selon la
+   boite) qu'il ne restait RIEN a flouter derriere le panneau — un acrylique sur
+   un aplat noir ne se voit pas. Il ne reste donc qu'une fumee, la meme partout. */
+#orgModal>div,#dlModal>div,#scanModal>div,#cookieModal>div{animation:modal-in var(--t-base) var(--ease-decel)}
+
+/* ==========================================================================
+   13bis. DIAPORAMA
+   --------------------------------------------------------------------------
+   Plein cadre, et rien d'autre : pas de barre, pas de bouton. Ce qui reste
+   visible est la jaquette, son nom, et ou l'on en est.
+   ========================================================================== */
+#diaModal{flex-direction:column;align-items:center;justify-content:center;z-index:var(--z-diaporama)}
+/* Le fond est la MEME jaquette, floutee : c'est ce que fait deja le panneau de
+   detail (#dpBg), et il n'existe pas d'autre image par jeu dans l'application. */
+#diaFond{position:absolute;inset:-8%;background-size:cover;background-position:center;
+  filter:blur(48px) saturate(1.3) brightness(.7)}
+/* LES DEUX COUCHES DE LA JAQUETTE. `#diaPile` porte la taille et le cadre ; les
+   images la remplissent et se fondent l'une dans l'autre. Le fondu disparait tout
+   seul sous `prefers-reduced-motion` : la regle generale de la feuille ramene
+   toutes les transitions a 0,01 ms. */
+#diaPile{position:relative;width:min(46vh,80vw);aspect-ratio:2/3;border-radius:var(--r-overlay);
+  overflow:hidden;box-shadow:var(--el-4);background:#00000040}
+#diaPile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
+  transition:opacity var(--t-slow) var(--ease-decel)}
+#diaPile img.on{opacity:1}
+/* LA LEGENDE NE DEPEND PLUS DE LA JAQUETTE.
+   Elle etait posee a meme la jaquette floutee, donc sa lisibilite etait celle de
+   l'image. Mesure au pixel sur la jaquette la plus claire : 2,05:1 pour le nom et
+   1,02:1 pour la meta, contre 5,62:1 et 2,59:1 sur une sombre — le seuil WCAG
+   pour du texte normal est 4,5:1. Le nom se perdait, l'identifiant et la taille
+   etaient quasi invisibles.
+
+   LA CAUSE N'EST PAS L'OMBRE, C'EST LA DEPENDANCE A L'IMAGE. Une ombre portee
+   aide sur un bord clair ; sur une jaquette uniformement blanche, rien ne
+   garantit qu'un halo suffise, et l'epaissir en ferait un aplat. On supprime donc
+   la dependance : une surface sombre DERRIERE le texte, dont l'opacite se choisit
+   par l'arithmetique du pire cas, pas sur deux jaquettes.
+
+   LES JETONS SONT LUS DANS CETTE FEUILLE, PAS SUPPOSES : --text-1 vaut #ffffff
+   (opaque), --text-2 vaut #ffffffc5, soit du blanc a 77 % d'opacite, et --text-3
+   #ffffff8a (54 %). --text-2 n'est donc PAS un gris : c'est du blanc translucide,
+   et c'est toute l'explication du 1,02:1 — du blanc a 77 % compose sur une jaquette
+   blanche EST du blanc. Le texte doit d'abord etre OPAQUE : tant qu'il est
+   translucide, il se compose avec le fond et le rapport s'effondre. Les quatre
+   textes passent donc a --text-1. La hierarchie n'y perd rien : elle est portee
+   par la taille et par la chasse fixe de la meta, pas par une encre plus pale.
+
+   L'ARITHMETIQUE DU PIRE CAS. Jaquette blanche (luminance relative 1,0), surface
+   noire d'opacite a, texte blanc opaque :
+     - modele du plan, qui lit la fraction composee (1-a) comme une luminance :
+       il faut 1,05 / ((1-a) + 0,05) >= 4,5, donc a >= 0,8167 ;
+     - modele exact, celui du navigateur : la composition CSS se fait en sRGB, le
+       canal compose vaut donc (1-a), et sa luminance vaut lin(1-a) — d'ou
+       a >= 0,5347 ;
+     - page reelle : #diaFond porte deja brightness(.7), donc la jaquette la plus
+       claire possible n'arrive qu'a une luminance de 0,448 et la borne exacte
+       tombe a a >= 0,3353. Ce modele est recoupe par la mesure : le nom blanc
+       opaque sur ce fond vaut 2,11:1, et la Task 5 avait mesure 2,05:1.
+   ON RETIENT 0,85 : le plus petit pas rond qui depasse 4,5:1 DANS LE MODELE LE
+   PLUS DEFAVORABLE DES TROIS (5,25:1). 0,82 y passe de justesse (4,57:1) et ne
+   laisse rien pour l'arrondi a 8 bits. Dans les deux autres modeles, la meme
+   surface vaut 15,1:1 et 17,3:1. La contrepartie est assumee et voulue : la
+   surface est franchement sombre, et la jaquette ne se devine plus derriere le
+   texte — c'est le prix d'une lisibilite independante de l'image.
+
+   LES QUATRE TEXTES SONT CONCERNES, PAS DEUX. #diaCompteur et #diaPause portaient
+   la meme couleur sur le meme fond et n'avaient jamais ete mesures ; #diaVide
+   s'affiche sans image du tout, donc sans meme le secours d'une ombre. Les quatre
+   recoivent la meme surface. Pas de flou d'arriere-plan ici : le budget de flou de
+   la feuille est plafonne, et la doctrine Mica le reserve a l'en-tete et aux
+   surfaces transitoires — un aplat translucide suffit et ne coute rien.
+
+   PIEGE DE L'INSTRUMENT, A SAVOIR PLUTOT QU'A SUBIR : la sonde choisit le fond
+   d'un texte en remontant les ancetres jusqu'au premier background-color dont
+   l'opacite depasse 0,75 (fondDe), sinon elle retombe sur rgb(26,26,26) — un gris
+   qui n'existe pas dans la page. En dessous de 0,75, la ligne CONTRASTE de la
+   sonde serait donc une FICTION. Et au-dessus, elle ignore l'alpha : rgba(0,0,0,.85)
+   y est lu comme du noir pur, soit 21:1 idealise alors que la valeur composee est
+   15,1:1. La ligne de la sonde est donc NECESSAIRE (elle manquait : ces quatre
+   elements ne portent aucune classe, donc ils n'etaient pas dans ses selecteurs,
+   et « Aucun defaut mesure » ne disait rien d'eux) mais pas SUFFISANTE : la preuve
+   reste la capture sur la jaquette la plus claire.
+
+   Les deux ombres portees RESTENT : elles adoucissent le bord de la surface, elles
+   ne portent plus la lisibilite. */
+#diaBas,#diaCompteur,#diaPause,#diaVide{background:rgba(0,0,0,.85);border-radius:var(--r-overlay);
+  color:var(--text-1)}
+#diaBas{position:relative;margin-top:var(--sp-5);text-align:center;max-width:min(92vw,760px);
+  padding:var(--sp-3) var(--sp-5)}
+#diaNom{font-family:var(--font-display);font-size:var(--fs-subtitle);line-height:var(--lh-subtitle);
+  font-weight:600;color:var(--text-1);text-shadow:0 2px 12px #000000cc}
+#diaMeta{margin-top:var(--sp-1);font-family:var(--mono);font-size:var(--fs-caption);color:var(--text-1);
+  text-shadow:0 1px 8px #000000cc}
+#diaCompteur{position:absolute;top:var(--sp-4);right:var(--sp-5);font-family:var(--mono);
+  font-size:var(--fs-caption);padding:var(--sp-2) var(--sp-3)}
+#diaPause{position:absolute;top:var(--sp-4);left:var(--sp-5);font-size:var(--fs-body);
+  padding:var(--sp-2) var(--sp-3)}
+#diaVide{position:relative;font-size:var(--fs-body);text-align:center;max-width:min(92vw,760px);
+  padding:var(--sp-4) var(--sp-5)}
+
+/* ---- LE VOILE DE SURCOUCHE : un composant, et l'ordre d'empilement ecrit ici --
+   Les neuf surcouches portaient chacune le MEME `position:fixed;inset:0;
+   background:...` ecrit EN LIGNE. Depuis que la fumee est la meme partout, trois
+   d'entre elles etaient devenues byte pour byte identiques, et le garde-fou des
+   styles en ligne l'a refuse — a raison : un voile est un composant.
+   Le z-index reste ici et PAS en ligne, parce que c'est une DECISION d'empilement
+   et qu'elle se lit maintenant d'un coup d'oeil. `dialogModal` est la plus haute,
+   et un garde-fou l'exige : une confirmation qu'on ne voit pas ne vaut rien.
+   `display:none` vit aussi ici : le JS pose `style.display='flex'` pour ouvrir,
+   et l'en-ligne l'emporte sur la feuille. */
+.ovl{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
+#orgModal{z-index:90}
+#dlModal,#scanModal,#healthModal{z-index:91}
+#cookieModal{z-index:95}
+#pickModal{z-index:96}
+#iaModal{z-index:var(--z-assistant)}
+#langModal,#helpModal{z-index:99}
+#dialogModal{z-index:100}
+
+/* LA COQUE DES PANNEAUX, EN UN SEUL ENDROIT.
+   Elle etait recopiee SEPT fois EN LIGNE, sur le `div` direct de chaque voile :
+   meme fond, meme filet, meme ombre, meme `display:flex` en colonne, et seules
+   la largeur et la hauteur maximale changeaient d'un panneau a l'autre. Un
+   en-ligne BAT la feuille : le palier 560 ne pouvait donc pas faire de ces
+   panneaux des feuilles pleine hauteur sans `!important`, interdit dans cette
+   feuille. C'est exactement le raisonnement qui a fait sortir le `z-index` de
+   l'en-ligne, juste au-dessus : une decision de mise en page se lit en UN
+   endroit, et une coquille recopiee sept fois ne se relit pas.
+   Les valeurs de la coque sont celles que partageaient le panneau de
+   telechargement et celui d'analyse : les regles qui suivent ne portent plus que
+   ce qui DIFFERE vraiment d'un panneau a l'autre.
+   `var(--r-overlay)` remplace le `10px` litteral que cinq panneaux portaient :
+   c'est le jeton deja defini pour cette intention (cartes, menus, surfaces), et
+   c'est le meme choix que les utilitaires plus bas — une intention qui s'ecrit
+   de deux facons finit par avoir l'air de deux applications. */
+.panel{
+  background:var(--bg-flyout);border:1px solid var(--stroke-secondary);
+  border-radius:var(--r-overlay);width:min(860px,95vw);max-height:85vh;
+  display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(1,4,9,.8)}
+/* CE QUI DIFFERE D'UN PANNEAU A L'AUTRE, et rien de plus. `#healthModal` garde
+   son animation d'entree plus courte : elle vivait en ligne sur la meme
+   declaration que la coque, et la perdre aurait ete une regression que rien
+   n'aurait signalee. */
+#orgModal>.panel{width:min(940px,95vw)}
+#healthModal>.panel{width:min(720px,94vw);max-height:80vh;animation:modal-in .18s ease}
+#cookieModal>.panel{width:min(620px,94vw);max-height:88vh}
+#pickModal>.panel{width:min(760px,94vw);max-height:86vh}
+#dialogModal>.panel{width:min(560px,94vw);max-height:86vh}
+
+/* L'ACRYLIQUE, ET SEULEMENT LA OU WINDOWS 11 L'EMPLOIE. Un panneau qui apparait
+   puis disparait n'a pas de fond propre a montrer : il flotte au-dessus du
+   contenu, donc il doit le laisser deviner. C'est la definition de l'acrylique
+   dans Fluent.
+   Ces panneaux tirent tous leur fond du MEME jeton (`--bg-flyout`), pose en ligne
+   dans `index.html` : passer ce jeton a 85 % les change tous les cinq d'un coup,
+   et cette regle leur donne le flou qui va avec. Un fond translucide SANS flou
+   serait pire que l'opaque : on lirait le contenu a travers le texte.
+   85 % est le taux de Fluent : le panneau reste lisible sur un fond d'ecran
+   clair, ce qui est justement le cas qu'on ne peut pas tester ici.
+   UN SEUL selecteur pour tous les panneaux, et volontairement STRUCTUREL :
+   `[id$="Modal"]>div` couvre les NEUF PANNEAUX de surcouche de l'application — et
+   ceux qu'on ajoutera, le diaporama excepte (voir juste en dessous). Une liste
+   d'identifiants avait deja derive : elle en couvrait six, et `healthModal`,
+   `pickModal` et `langModal` auraient garde un fond translucide SANS flou, donc du
+   texte lisible a travers. `SURCOUCHES` dans `app.js` reste la liste de reference
+   pour le clavier ; ici, c'est la forme du DOM qui decide, parce qu'un panneau de
+   surcouche est toujours le `div` direct de son voile. */
+/* `:not(#diaModal)` : le diaporama n'est pas un PANNEAU pose sur un voile, c'est
+   une surface plein cadre. Ses trois div directs recevaient sinon l'acrylique —
+   et son fond, deja floute a 48 px, l'aurait ete DEUX fois. */
+[id$="Modal"]:not(#diaModal)>div,.langmenu,.toast{
+  backdrop-filter:blur(40px) saturate(1.3);
+  -webkit-backdrop-filter:blur(40px) saturate(1.3);
+}
+@keyframes modal-in{from{transform:translateY(8px) scale(.99);opacity:0}to{transform:none;opacity:1}}
+
+/* ==========================================================================
+   14. MOUVEMENT REDUIT
+   On neutralise les transitions, on ne les supprime pas : les changements
+   d'etat doivent rester perceptibles, juste instantanes.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+  /* `#appbg{transform:none}` a disparu avec le `scale` : la couche Mica deborde
+     maintenant par `inset:-12%`, qui n'est pas un mouvement et n'a donc rien a
+     desactiver ici. Laisser la regle aurait fait croire a un reglage actif. */
+  .fcard .cov,.fcard .nocov{-webkit-box-reflect:none}
+  .detail .dcov{transform:none}
+  .card:hover,.shelf-i:hover{transform:none}
+  .skel-card::after,.skel-row::after{animation:none;background:#ffffff09}
+}
+
+/* ==========================================================================
+   15. FENETRE ETROITE
+   Windows 11 deplace son NavigationView en icones sous 640 px ; on fait pareil
+   par paliers, et les icones cedent toujours avant les libelles.
+   ========================================================================== */
+@media (max-width:1200px){
+  /* L'EN-TETE N'A PLUS DE PADDING VERTICAL NI DE GAP ENTRE SES RANGEES. Cette
+     regle ajoutait `padding:8px` en haut et en bas plus un `gap` de 12 px, ce
+     qui valait 28 px de plus — mesure : la barre passait de 84 a 112 px sous
+     1200 px, soit PLUS HAUT que les 108 px d'origine, sur les fenetres ou la
+     place est justement la plus rare. Les deux rangees portent deja leur propre
+     rembourrage ; l'horizontale, elle, est decidee par la derniere regle. */
+  #topbar{gap:0;padding-block:0}
+  /* Deux panneaux cote a cote deviennent illisibles : on empile. */
+  .conpane{grid-template-columns:1fr}
+  /* Le cockpit aussi : monitor et idcard s'empilent, les portes en 2×2. */
+  .cockpit{grid-template-columns:1fr}
+  .conzones{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ttab{padding:4px 10px;font-size:var(--fs-caption)}
+  #vtitle{padding:var(--sp-4) var(--sp-4) var(--sp-1)}
+  #vtName{font-size:var(--fs-subtitle);line-height:var(--lh-subtitle)}
+  .view{padding:var(--sp-3) var(--sp-4) var(--sp-5)}
+  .grid,.skel-grid{grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:var(--sp-3)}
+  .detail{width:100vw}
+  .detail .dfix{padding:var(--sp-4) var(--sp-4) 0}
+  .detail .dtabs{margin-inline:calc(-1 * var(--sp-4));padding:0 var(--sp-4)}
+  .detail .dfacts{margin-inline:calc(-1 * var(--sp-4))}
+  .detail .dscroll{padding:var(--sp-3) var(--sp-4) var(--sp-4)}
+  .detail .dtop{gap:var(--sp-4)}
+  .detail .dname{font-size:var(--fs-title)}
+}
+/* LES ICONES CEDENT AVANT LES LIBELLES, ET PLUS TOT QU'AVANT. Mesure : a 900 px
+   la bande d'onglets demandait 931 px pour 852 de place — et comme elle defile
+   sans barre visible, l'onglet CONSOLE devenait inatteignable. Les icones valent
+   184 px a elles huit : on les retire des 1000 px, ce qui ramene la bande a
+   747 px et la fait tenir jusqu'a 800 px. Un onglet qu'on ne peut pas atteindre
+   est un defaut ; une icone en moins n'en est pas un. */
+@media (max-width:1000px){
+  .ttab .ni{display:none}
+}
+@media (max-width:880px){
+  #ctlbar{gap:var(--sp-2);padding:var(--sp-1) var(--sp-3)}
+  #abHint{display:none}
+  /* LA JAUGE PART, LE CHIFFRE RESTE. Le selecteur ne porte plus la place libre
+     (il ne porte plus que le role) : masquer tout le bloc `.tb-disk` la faisait
+     donc disparaitre de l'ecran ENTIER sous 880 px. La jauge est la partie
+     decorative, le chiffre est l'information.
+     Et la borne de 110 px datait du temps ou l'option portait la lettre, la
+     place libre ET le role : elle coupait maintenant « H: ◆ Jeux · Dépôt »
+     (166 px demandes) en « H: ». Mesure : 210 px suffisent, et la rangee tient
+     jusqu'a 760 px. */
+  .tb-gauge{display:none}
+  .tb-right select{max-width:210px}
+  /* 2 px de moins de chaque cote : 32 px sur les huit onglets, ce qui repousse
+     le defilement de 800 a 760 px. */
+  .ttab{padding-inline:var(--sp-2)}
+  .statgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .detail .dtop{flex-direction:column}
+  .detail .dcov{transform:none}
+}
+@media (max-width:760px){
+  /* Sous 760 px il n'y a plus la place pour la place libre ET pour le selecteur.
+     C'est le selecteur qui reste : on ne choisit pas son disque sans son role.
+     `.tb-disk` ne disparait donc qu'ici, et pas 120 px plus tot. */
+  .tb-disk{display:none}
+}
+
+/* LES ONGLETS REPASSENT EN ICONES — ET LE SEUIL EST MESURE, PAS CHOISI.
+   Avec leurs libelles il faut 715 px a la bande ; la place vaut la fenetre moins
+   48 px de marge, donc les libelles tiennent a partir de 763 px — et a 763
+   exactement, c'est 715 pour 715, sans un pixel de marge. Un seuil pose la
+   laisserait deborder sur les deux pixels suivants, et cette marge de 780 tient
+   compte du fait que la mesure est faite a UN rendu de police : une autre police
+   ou un autre facteur d'echelle decale ces 715 px.
+   Avant correction, entre 561 et 760 la bande demandait 715 px pour 712 — trois
+   pixels de trop, et comme elle defile SANS barre visible, l'onglet CONSOLE
+   devenait inatteignable sans que rien ne le dise.
+   C'est aussi ce que fait Windows 11 sous 640 px : son NavigationView abandonne
+   les libelles plutot que de les faire defiler. Le libelle n'est PAS retire du
+   DOM — il est sorti de l'ecran (position absolue, 1 px), donc le bouton garde un
+   nom accessible et un lecteur d'ecran continue de l'annoncer. Un onglet sans nom
+   ne se lit pas.
+   `flex:1 1 0` au lieu de `min-width:max-content` : les huit se partagent la
+   largeur a egalite, donc aucun ne passe a la ligne et aucun n'est coupe. */
+@media (max-width:780px){
+  .tb-tabs{flex-wrap:nowrap}
+  .ttab{flex:1 1 0;min-width:0;padding-inline:0;gap:0}
+  .ttab .ni{display:flex}
+  .ttab .txt{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}
+
+/* ==========================================================================
+   TELEPHONE (<= 560 px)
+   --------------------------------------------------------------------------
+   Mesure a 390x844 avant correction : les deux barres d'outils debordaient —
+   `.tb-tools` 493 px et `.tb-filters` 379 px dans 342 — et la rangee d'identite
+   poussait le bouton de LANGUE hors de l'ecran (jusqu'a x=599).
+   ========================================================================== */
+@media (max-width:560px){
+  /* LES DEUX BARRES D'OUTILS SE REPLIENT. `.toolbar` portait deja `flex-wrap`,
+     mais ses ENFANTS ne se repliaient pas : `.tb-tools` restait une rangee de six
+     boutons de 493 px, et `.tb-filters` une rangee de 379 px. On replie les
+     enfants, et les filtres prennent toute la ligne — une recherche et un tri
+     n'ont pas a cohabiter avec six boutons sur 342 px. */
+  .tb-tools{flex-wrap:wrap;padding-left:0;border-left:0}
+  .tb-filters{flex-wrap:wrap;margin-left:0;width:100%}
+  #libFilter,#dlSearch{flex:1 1 120px;min-width:0}
+  .status{margin-left:0;width:100%}
+
+  /* LA RANGEE 1 DEBORDAIT DE 209 px. Mesure a 390 : `.tb-right` allait jusqu'a
+     x=599 pour une fenetre de 390 — le selecteur de disque finissait a 473 et le
+     bouton de langue a 599, donc INVISIBLE. Sur un telephone, on ne pouvait ni
+     changer de disque ni changer de langue.
+     Le verrou de marque perd son texte et garde son logo : c'est ce que fait
+     toute application mobile, et c'est ce qui rend la place au selecteur — lequel
+     garde son libelle entier, plutot que d'etre tronque. */
+  .brand .bn,.brand .bs{display:none}
+  /* ET RIEN NE DEBORDE PLUS, PAR CONSTRUCTION. Le bouton de LANGUE ne se coupe
+     jamais (`flex:0 0 auto`) : c'est par lui qu'on change de langue, l'amputer
+     serait enfermer l'utilisateur dans une langue. Le SELECTEUR, lui, peut se
+     retrecir : son libelle complet est dans l'infobulle, et un select tronque
+     reste utilisable. `min-width:0` est ce qui autorise un enfant de flex a
+     descendre sous sa taille de contenu — sans lui, la rangee pousse la page. */
+  .tb-right{min-width:0}
+  .tb-right select{flex:0 1 auto;min-width:0;font-size:var(--fs-caption)}
+  .langwrap{flex:0 0 auto}
+  /* Le bouton de langue garde son libelle mais perd du rembourrage : sur un
+     telephone, « 🌐 FR » n'a pas besoin de 24 px de marge laterale. */
+  #langBtn{padding-inline:var(--sp-1)}
+
+  /* Une colonne de lecture de 24 px de marge sur un ecran de 390 laisse 342 px
+     utiles : c'est deja peu, on ne garde que l'essentiel. */
+  /* Reglages : une ligne « libelle | controle » de 200+342 px ne tient pas —
+     le libelle prend toute la ligne, le controle dessous. */
+  .srl{flex-wrap:wrap}
+  .srl .lb{flex-basis:100%}
+  /* Assistant : interrupteur + modele + port + etat dans 342 px — le controle
+     enroule, le champ modele garde une largeur utile. */
+  .srl .ctl{flex-wrap:wrap}
+  .srl .ctl input[type=text]{flex:1 1 140px}
+  /* Stockage : la ligne « lettre role fs numeros » tient en cachant
+     le role — la lettre et les chiffres restent. */
+  .stodrv .storo{display:none}
+  .stotot{gap:16px}
+  .view{padding:var(--sp-3)}
+  #vtitle{padding:var(--sp-3) var(--sp-3) 0}
+  #vtName{font-size:var(--fs-subtitle);line-height:var(--lh-subtitle)}
+  #vtSub{display:none}
+  /* Les grilles passent a deux colonnes de jaquettes : trois colonnes sur 342 px
+     donnent des vignettes de 100 px ou l'on ne reconnait plus rien. */
+  .grid,.skel-grid{grid-template-columns:repeat(2,1fr);gap:var(--sp-3)}
+
+  /* LA BANDE D'ONGLETS PASSE AU BORD DE L'ECRAN, ET CHAQUE ONGLET A 44 px.
+     L'ARITHMETIQUE DICTE LA FORME, et voici la sienne : huit cibles de 44 px
+     font 352 px, alors que la bande n'en offrait que 342 a 390 px (312 a 360),
+     parce que les 24 px de marge de chaque cote mangent le reste. Il n'existe
+     donc AUCUNE repartition qui donne a la fois huit cibles de 44 px, huit
+     onglets visibles et un alignement sur la colonne de lecture.
+     Ce qu'on retire, c'est l'encoche laterale — et SEULEMENT pour cette bande :
+     une barre d'onglets est un element de BORD (c'est ce que fait un systeme
+     mobile), le contenu et la rangee d'identite gardent leurs 24 px.
+     8 x 44 px + 7 ecarts de 1 px = 359 px : ca tient des 360 px de large, donc
+     les huit onglets sont la, tous au doigt, sans rien faire defiler. C'est
+     exactement l'arbitrage de la regle de 780 px plus haut — « un onglet qu'on
+     ne peut pas atteindre est un defaut » — pousse jusqu'au bout : sous 352 px
+     de bande, la faire defiler devient le seul recours, et c'est la regle de
+     358 px qui prend alors le relais, avec son indice de bord.
+     LES LIBELLES RESTENT SORTIS DE L'ECRAN (regle de 780 px) : un nom ne tient
+     pas dans 44 px, et Windows 11 abandonne ses libelles plutot que de les
+     faire defiler. Ils sont toujours dans le DOM, donc annonces par un lecteur
+     d'ecran. */
+  .tb-tabs{gap:1px;margin-inline:calc(-1 * var(--sp-5))}
+  .ttab{min-width:44px}
+
+  /* LA FILE D'ACTIVITE : la pastille d'etat et la taille cedent la place au
+     nom — le titre de groupe dit deja l'etat, et la taille est la donnee la
+     moins utile quand on ne fait que surveiller. Les sources defilent avec un
+     fondu de bord droit qui le DIT (comme .shelf, et la bande d'onglets sous
+     358 px) : une barre masquee sans indice est le defaut documente plus haut. */
+  .frow .fvit,.frow .badge{display:none}
+  .frow .frt{min-width:0}
+  .srcrow .seg{max-width:100%;overflow-x:auto;scrollbar-width:none;
+    -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);
+    mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent)}
+  .seg-i{flex-shrink:0}
+
+  /* ======================================================================
+     LES TABLEAUX DEVIENNENT DES FICHES
+     ----------------------------------------------------------------------
+     Mesure a 390 px avant correction (`before-phone-cat.txt`) : le tableau du
+     catalogue faisait 620 px de large dans une colonne de 330 (« tablewrap
+     620>330 »), et ses 301 lignes poussaient trois cents rangees hors de
+     l'ecran, lisibles seulement en faisant defiler lateralement. Le plancher
+     vient de `.tablewrap table{min-width:620px}` (l. 842) ; l'en-tete, lui,
+     n'a plus rien a faire la puisque chaque cellule porte le nom de son champ.
+     Le HTML ne bouge pas (une classe sur `<table>`, un `data-l` par cellule de
+     donnee) : le bureau garde son tableau, et c'est ce palier qui bascule.
+     ====================================================================== */
+
+  /* LE PLANCHER DE 620 px TOMBE, ET LA REGLE DOIT POUVOIR GAGNER.
+     `.tablewrap table{min-width:620px}` (l. 842) vaut (0,0,1,1), un `.tbl` seul
+     (0,0,1,0) : une media query n'ajoute AUCUNE specificite, donc un `.tbl`
+     ecrit ici ne battrait rien. C'est la declaration perdante qui se deplace
+     (aucun `!important` dans cette feuille) : le palier nomme aussi le
+     conteneur. `.tbl{display:block}` n'est pas un ornement non plus : sans lui le
+     navigateur enveloppe chaque `<tr>` devenu bloc dans des boites de tableau
+     ANONYMES, et la fiche reste mise en page par l'algorithme de tableau. */
+  .tbl{display:block;min-width:0}
+  .tablewrap .tbl{min-width:0}
+  /* ET LE `<tbody>` AUSSI, SINON LA FICHE SE RETRECIT SUR SON CONTENU.
+     `table{display:block}` ne suffit pas : le `<tbody>` reste un
+     `table-row-group`, donc le navigateur fabrique autour de chaque `<tr>`
+     devenu bloc une LIGNE et une CELLULE anonymes — et cette cellule anonyme
+     se dimensionne en « shrink-to-fit ». Mesure a 390 px dans `#dlResults`
+     (330 px de colonne) : sans cette ligne, la fiche d'une ligne courte faisait
+     **117 px de large** et chacune de ses trois cellules **182 px**, posees par
+     l'algorithme de tableau AU LIEU de la regle `.tbl`. Elle ne paraissait
+     juste dans le catalogue que parce que ses noms de jeux et ses deux boutons
+     atteignaient deja la largeur de la colonne — le defaut n'etait pas absent,
+     il etait masque par le contenu. */
+  .tbl tbody{display:block}
+  /* L'EN-TETE DISPARAIT : le nom du champ passe devant la valeur. */
+  .tbl thead{display:none}
+
+  /* UNE LIGNE DEVIENT UNE FICHE : un cadre, un fond, une marge entre elles. */
+  .tbl tr{display:block;background:var(--bg-card);border:1px solid var(--stroke-secondary);
+    border-radius:var(--r-overlay);margin-bottom:var(--sp-2)}
+
+  /* UNE CELLULE DEVIENT UNE LIGNE « LIBELLE — VALEUR ».
+     `min-width:100%` n'est pas un confort : les largeurs de colonne sont
+     ID-SCOPED (`#v-cat table td:nth-child(1){width:58%}`, `#v-hb ...{width:96px}`)
+     et `dlmFileRow` en pose meme CINQ EN LIGNE (`width:80px`, `width:180px`) —
+     qu'aucune regle de feuille ne peut battre. `min-width` gagne sur `width`
+     dans le calcul de la largeur utilisee, quelle que soit l'origine de la
+     declaration : la cellule prend donc la largeur de la fiche sans
+     `!important`, et sans que le bureau ait a bouger d'un pixel. */
+  .tbl td{display:flex;justify-content:space-between;min-width:100%;
+    padding:var(--sp-2) var(--sp-3)}
+  /* La derniere cellule ne double pas le bord de la fiche. */
+  .tbl td:last-child{border-bottom:0}
+  /* LE LIBELLE VIENT DE L'ATTRIBUT, PAS D'UNE CHAINE RECOPIEE : les en-tetes
+     sont deja traduits par `trDom()`, donc la fiche suit la langue affichee.
+     `margin-right:auto` absorbe l'espace libre, ce qui colle la valeur a droite
+     MEME quand la cellule porte deux boutons (sinon `space-between` les
+     ecarterait l'un de l'autre au milieu de la fiche).
+     `flex:0 0 auto` est l'autre moitie : le libelle garde TOUJOURS sa largeur.
+     Un nom de fichier d'archive.org ne doit pas pouvoir ecraser le nom du
+     champ — c'est la valeur qui se replie, pas l'etiquette.
+     `--fs-caption` (12 px) est le plancher que la sonde exige — et un
+     pseudo-element n'est pas mesure par elle, donc c'est ce garde-fou-ci qui
+     tient la taille. */
+  .tbl td::before{content:attr(data-l);flex:0 0 auto;margin-right:auto;color:var(--text-3);
+    font-size:var(--fs-caption);font-weight:600}
+  /* LA VALEUR EST UN SEUL ELEMENT, ET C'EST LUI QUI SE COMPRIME.
+     Le constructeur enveloppe la valeur dans un `<span class="v">` : la cellule
+     n'a donc que DEUX enfants, et c'est ce qui rend le reste possible. Avec
+     plusieurs enfants directs, chacun devenait une case de la rangee — un `<br>`
+     une case VIDE (il ne saute plus de ligne : `orgBody` et `scanBody` ont une
+     sous-ligne « → … », `dlmFileRow` un `<div>` de source — les deux se
+     retrouvaient cote a cote avec le titre).
+     `min-width:0` autorise un enfant de flex a descendre sous sa taille de
+     contenu : sans lui, cette valeur pousserait la fiche au lieu de se replier.
+     Il n'est PAS sur `::before`, qui porte `flex:0 0 auto`. */
+  .tbl .v{min-width:0}
+  /* LES LIGNES DE REMPLISSAGE N'ONT PAS DE COLONNE. Un `colspan="4"` couvre
+     quatre colonnes sans en etre aucune : sans cette regle, le squelette et
+     l'etat vide porteraient un libelle vide devant leur contenu. */
+  .tbl td:not([data-l])::before{content:none}
+  /* Une cellule de remplissage porte un bloc entier (squelette, etat vide) :
+     elle reste un bloc, sans rembourrage ni libelle. */
+  .tbl td.tdfill{display:block;padding:0;border:0}
+  /* LE TITLEID NE SE COLLE PLUS EN UNE SEULE LIGNE. `.c-tid` porte
+     `white-space:nowrap` : en fiche, un identifiant long deborderait au lieu de
+     se replier, et la fiche est faite pour se replier. */
+  .tbl .c-tid{white-space:normal}
+
+  /* ======================================================================
+     LES SURCOUCHES DEVIENNENT DES FEUILLES
+     ----------------------------------------------------------------------
+     Mesure a 390x844 avant correction (`t4-before-phone-ovl-*.txt`) : les sept
+     panneaux de dialogue faisaient 367 a 371 px de large dans une fenetre de
+     390, et ils etaient CENTRES verticalement — les actions tombaient donc au
+     milieu de l'ecran, hors de portee du pouce, avec 10 px de marge perdue de
+     chaque cote. Une feuille occupe la largeur, les actions restent EN BAS, et
+     le corps defile : c'est deja la structure de ces panneaux (`.ov-head`, puis
+     `.ov-body{overflow:auto;flex:1}`, puis le pied), qui ne bouge pas ici.
+
+     LES IDENTIFIANTS NE SONT PAS UNE REDITE. Les largeurs qui different d'un
+     panneau a l'autre sont ID-SCOPED (`#orgModal>.panel` vaut (0,1,1,0)) et
+     battraient un `.panel` seul (0,0,1,0) quel que soit l'ordre du fichier :
+     une media query n'ajoute AUCUNE specificite. C'est le piege deja referme
+     plus haut dans ce palier sur `.tablewrap table{min-width:620px}`, et la
+     meme reponse : c'est la declaration perdante qui se deplace — ici le palier
+     nomme les conteneurs. Verifie par mutation : sans cette liste
+     d'identifiants, cinq panneaux restent a 367-371 px dans une fenetre de 390.
+     `height:100%` suffit a dire « toute la fenetre » : le panneau est le `div`
+     direct d'un voile en `position:fixed;inset:0`, donc 100 % vaut l'ecran.
+     Le filet et l'arrondi tombent : une feuille touche les bords. */
+  .panel,#orgModal>.panel,#dlModal>.panel,#scanModal>.panel,#healthModal>.panel,
+  #cookieModal>.panel,#pickModal>.panel,#dialogModal>.panel,#iaModal>.panel{
+    width:100%;max-width:none;height:100%;max-height:100%;border:0;border-radius:0}
+}
+
+/* SOUS 359 px DE BANDE, L'ARITHMETIQUE GAGNE : LES ONGLETS DEFILENT, ET LA
+   BANDE LE DIT.
+   359 px est la largeur exacte des huit onglets et de leurs ecarts, donc le
+   seuil n'est pas choisi : c'est celui ou le contenu cesse de tenir. Le defaut
+   que ce chantier corrige n'a jamais ete le defilement, c'est le defilement
+   MUET : la barre est masquee (`scrollbar-width:none`), donc rien n'annoncait
+   qu'il restait des onglets a droite — c'est mot pour mot le defaut documente
+   a la regle de 780 px. Un masque qui fond le bord droit le dit.
+   Le masque est pose ICI et pas sur `max-width:560px` : a 360, 390 et 412 px
+   les huit onglets TIENNENT, et un fondu y mangerait le dernier onglet pour
+   annoncer un defilement qui n'existe pas. */
+@media (max-width:358px){
+  .tb-tabs{
+    -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);
+    mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);
+  }
+}
+
+/* ==========================================================================
+   15bis. UTILITAIRES — les intentions qui revenaient ecrites en ligne
+   --------------------------------------------------------------------------
+   `color:var(--text-3);font-size:var(--fs-caption)` etait ecrit NEUF fois a la
+   main dans app.js, et le meme « petit bouton » portait SIX paddings differents
+   (2px 9px, 2px 10px, 3px 10px, 3px 12px, 4px 12px, 5px 12px). Une intention qui
+   s'ecrit de neuf facons ne peut pas avoir l'air d'une seule application.
+
+   Ces classes portent l'intention. L'inline ne doit plus porter que ce qui est
+   VRAIMENT propre a un element — et un test interdit qu'un meme style en ligne
+   apparaisse plus de deux fois.
+   ========================================================================== */
+.dim{color:var(--text-3)}
+.t1{color:var(--text-1)}
+.acc{color:var(--ac)}
+.errc{color:var(--danger)}
+.warnc{color:var(--warn)}
+.sev-err{color:var(--danger)}.sev-warn{color:var(--warn)}.sev-info{color:var(--info)}
+.infoc{color:var(--info)}
+.cap{font-size:var(--fs-caption)}
+.bold{font-weight:700}
+.ptr{cursor:pointer}
+.link{text-decoration:underline}
+.segoe{font-family:var(--font)}
+.ic13{width:13px;height:13px;display:block;margin:auto}
+.right{float:right}
+.center{text-align:center}
+/* Le petit bouton : UNE taille, pas six. Il se combine avec .cap quand le
+   libelle doit etre discret. */
+.pad-s{padding:4px 10px}
+
+/* Les motifs qui revenaient en ligne, extraits en classes.
+   Un en-tete de surcouche ecrit cinq fois a la main, un corps de panneau trois
+   fois : la troisieme repetition est le signal. */
+.ov-head{padding:14px 18px;border-bottom:1px solid var(--stroke-secondary);display:flex;justify-content:space-between;align-items:center}
+.ov-head b{letter-spacing:1px}
+/* LE CORPS D'UN PANNEAU EST LE SEUL ENDROIT QUI DEFILE, ET C'EST CE QUI MET LES
+   ACTIONS EN BAS. `flex:1` le fait occuper toute la hauteur que l'en-tete et le
+   pied laissent : mesure a 390x844 sur `#ckBody`, le corps occupe 771 px des
+   844 px de la feuille — sans lui il s'arrete a ses 504 px de contenu et laisse
+   267 px de vide en bas.
+   `overflow:auto` est la declaration qui PROTEGE : mesure avec un corps de
+   2807 px de contenu (soixante lignes), le panneau reste a 844/844 et c'est le
+   corps qui defile ; en `overflow:visible`, le meme contenu fait deborder le
+   panneau a 2862 px. `min-height:0` accompagne ce contrat sans rien changer ici
+   — mesure : `min-height:auto` rend exactement le meme releve, parce qu'un corps
+   qui defile a DEJA une taille minimale automatique de zero. Il est ecrit pour
+   que le contrat reste vrai si quelqu'un touche a l'`overflow`.
+   Les deux corps sans en-tete — `#healthBody` et `#ckBody` — ont rejoint cette
+   classe : ils portaient leur defilement EN LIGNE, l'un avec `flex:1` et l'autre
+   sans, donc deux contrats pour une seule intention. Ils gardent leurs propres
+   marges interieures, posees en ligne. */
+.ov-body{overflow:auto;flex:1;min-height:0;padding:0 14px}
+/* La barre de filtre de l'organisateur : elle vit entre l'en-tete et le corps,
+   a la meme place que la recherche des autres vues. La note a cote rappelle la
+   regle — les lignes cachees ne seront pas traitees. */
+.org-tools{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) 18px;border-bottom:1px solid var(--stroke-secondary)}
+.org-tools input{flex:1;min-width:0}
+.org-batch{max-width:240px}
+.orgCk{justify-content:center}
+@media (pointer:coarse){.orgCk{min-width:44px}}
+/* Le pied de la modale peut tenir sur deux lignes : le compteur a priorite. */
+#orgModal .ov-body+div{flex-wrap:wrap}
+#orgModal #orgInfo{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-3);font-size:var(--fs-caption)}
+@media (max-width:560px){#orgModal #orgInfo{flex-basis:100%}
+/* Sous 560 px, la barre d'outils des surcouches passe sur deux lignes : le
+   champ de filtre a besoin d'une ligne entiere pour rester une cible utile. */
+.org-tools{flex-wrap:wrap}
+.org-tools input{flex-basis:100%}}
+/* Previsualisation de l'organisation : la phase CONFIRMER montre les operations,
+   la phase EXECUTER les ecrit. Rien ne se deduit — tout est affiche. */
+.prv-head{padding:14px 18px;font-size:var(--fs-caption);color:var(--text-3);border-bottom:1px solid var(--stroke-secondary)}
+.prv{display:flex;align-items:center;gap:var(--sp-3);padding:8px 14px;border-bottom:1px solid var(--stroke-secondary)}
+.prv .badge{flex:0 0 104px;text-align:center}
+.prv-m{flex:1;min-width:0;display:flex;flex-direction:column}
+.prv-m b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.prv.danger .prv-m b{color:var(--danger)}
+/* Journal d'operations : la ligne d'erreur ne doit pas ressembler aux autres. */
+.lr{color:var(--text-3)}
+.lh{color:var(--ac);font-weight:600}
+.le{color:var(--danger);font-weight:600}
+/* Le saut de ligne dans un conteneur `flex-wrap` : la troisieme repetition de
+   `style="flex-basis:100%"` en ligne a declenche le garde-fou, a raison. */
+.br{flex-basis:100%}
+
+/* Le corps de la fenetre « connexion archive.org » : ces styles etaient ecrits en
+   ligne, et le passage a trois langues les a repetes trois fois. */
+.ck-auto{width:100%;padding:var(--sp-3);font-size:var(--fs-body)}
+.ck-status{color:var(--info);font-size:var(--fs-caption);margin-top:10px}
+.ck-or{color:var(--text-3);font-size:var(--fs-caption);margin:14px 0 10px;text-align:center}
+.ck-code{display:block;background:var(--fill-default);border:1px solid var(--stroke-secondary);border-radius:6px;padding:8px 14px;margin:8px 0;font-size:var(--fs-caption);word-break:break-all;color:var(--text-3)}
+.ck-row{display:flex;gap:8px;margin-top:4px}
+.ck-in{flex:1;font-family:var(--mono);font-size:var(--fs-caption)}
+.ck-note{color:var(--text-3);font-size:var(--fs-caption);margin-top:10px}
+
+/* Les marges verticales qui revenaient en ligne. */
+.mt-3{margin-top:14px}
+
+/* ==========================================================================
+   LE BANDEAU DE LANGUES — un menu qui se deroule.
+   --------------------------------------------------------------------------
+   Il s'ouvre au SURVOL *et* au FOCUS. Le focus compte autant que la souris : a
+   la manette, il n'y a pas de survol, et `:focus-within` est le seul chemin vers
+   le menu. Une fois le bouton atteint, les entrees deviennent focusables et le
+   deplacement geometrique du pad les atteint.
+   ========================================================================== */
+.langwrap{position:relative;display:inline-block}
+.langmenu{position:absolute;top:calc(100% + 6px);right:0;min-width:180px;background:var(--bg-flyout);
+  border:1px solid var(--stroke-secondary);border-radius:var(--r-overlay);padding:var(--sp-1);display:none;z-index:60;
+  box-shadow:0 12px 32px rgba(1,4,9,.65)}
+.langwrap:hover .langmenu,.langwrap:focus-within .langmenu,.langwrap.ouvert .langmenu{display:block}
+.langmenu button{display:flex;align-items:center;gap:var(--sp-3);width:100%;padding:2px 8px;background:none;
+  border:0;border-radius:var(--r-control);color:var(--text-1);font-size:var(--fs-caption);font-family:inherit;
+  cursor:pointer;text-align:left;line-height:2}
+.langmenu button:hover,.langmenu button:focus-visible{background:var(--fill-secondary)}
+/* La langue active se marque : sans cela, on ne sait pas d'ou l'on part. */
+.langmenu button[aria-current="true"]{color:var(--ac);font-weight:600}
+.langmenu button[aria-current="true"]::after{content:"✓";margin-left:auto}
+
+/* ==========================================================================
+   LES CARTES DE CIBLES ET LES CONSEILS.
+   --------------------------------------------------------------------------
+   Les cibles reutilisaient `.qbtn`, fait pour les actions rapides : une icone
+   SEULE sur sa ligne, puis le nom. L'icone orpheline en haut d'une carte faisait
+   une carte desequilibree, avec un trou au-dessus du texte. Une cible se lit
+   comme une fiche : l'icone ET le nom sur la meme ligne, le reste dessous.
+   ========================================================================== */
+/* La severite se lit dans le texte et l'icone, pas dans un filet de couleur —
+   le design n'en porte pas. */
+.advcard.err,.advcard.warn,.advcard.info{border-left:1px solid var(--stroke-secondary)}
+
+/* ==========================================================================
+   15ter. LE DOIGT — la taille des cibles, et ce qui n'existait qu'au survol
+   --------------------------------------------------------------------------
+   La feuille n'avait AUCUNE regle tactile : ni `pointer: coarse`, ni
+   `hover: none`, et c'est verifie dans la page (pointeur grossier : OUI,
+   survol : AUCUN, sous emulation mobile). Deux consequences mesurees a 390 px :
+     - `--h-control` vaut 32 px PARTOUT, donc chaque controle de l'application
+       est sous la cible du doigt (44 px) — 21 cibles fautives sur 55 dans la
+       seule vue Bibliotheque ;
+     - le menu de langues s'ouvre AU SURVOL (`langwrap:hover`), donc au doigt il
+       s'ouvre et ne se referme plus : un doigt n'a pas de survol, et le
+       navigateur pose `:hover` sur l'element touche sans jamais le retirer.
+   Les deux reglages vivent donc dans des MEDIA-FEATURES, jamais dans un palier
+   de largeur : une fenetre etroite sur un PC garde exactement le rendu du
+   bureau (controles de 32 px, survol), et c'est voulu — epaissir le bureau
+   pour un telephone qu'il n'est pas serait une regression deguisee.
+   ========================================================================== */
+@media (pointer: coarse){
+  /* 44 px, dans les DEUX dimensions : c'est le seuil que la sonde mesure, et
+     c'est celui que le doigt demande. Windows 11 passe a 40 px en mode
+     tactile ; on prend la valeur du seuil plutot qu'une valeur voisine. */
+  :root{--h-control:44px}
+  /* TOUT CE QU'UN DOIGT TOUCHE. Un doigt n'a pas de curseur : une cible de
+     26 px de haut se rate, et un bouton d'icone de 41 px de large se rate
+     aussi. La liste est celle de la sonde (`button, a[href], [tabindex="0"],
+     input, select, textarea, label.checkline`) — il n'y a aucun `a[href]`
+     dans la page, le seul que le client cree sert a telecharger un CSV et
+     n'est jamais monte dans le document.
+     DEUX EXCLUSIONS, chacune pour ne pas fabriquer un defaut en croyant le
+     corriger :
+       - les cases a cocher et les boutons radio : ils vivent dans un `label`
+         qui porte le clic sur toute la ligne (44 px), etirer la case
+         elle-meme donnerait une case de 44 px de haut pour 14 de large ;
+       - `label.checkline` prend la hauteur, LUI : c'est la cible reelle. */
+  button,select,textarea,label.checkline,label.sw,
+  input:not([type=checkbox]):not([type=radio]),
+  [tabindex="0"]{min-height:44px}
+  /* LA LARGEUR MANQUAIT AUSSI, ET PAS SEULEMENT LA HAUTEUR. Les boutons qui ne
+     portent qu'une icone ou une croix se mesurent sur leur glyphe : 41 px pour
+     la croix d'une ligne de telechargement, 42 px pour la pastille « ALL ».
+     Un libelle, lui, elargit deja son bouton : cette regle ne change rien pour
+     eux. */
+  button.btn,.seg-i,.dbtn,.dclose,.fmini,label.sw{min-width:44px}
+  /* LA RANGEE D'IDENTITE PERD SON REMBOURRAGE VERTICAL, ET LA RAISON EST LE
+     DOIGT, PAS LA LARGEUR. C'est une consequence des 44 px ci-dessus, qui
+     valent a TOUTE largeur des que le pointeur est grossier : 4 + 44 + 4 + 44
+     + 1 px de filet font 97 px d'en-tete, au-dessus du plafond de 96 px que la
+     sonde impose. On rend ces 8 px au contenu.
+     CETTE REGLE A VECU DANS LE PALIER 560, ET C'ETAIT UN PLACEMENT FAUX : sa
+     justification parlait deja du doigt, alors qu'un palier de largeur ne dit
+     rien du peripherique. Mesure du balayage (8 vues x 5 tailles au doigt) :
+     les 16 seuls echecs sur 56 tombaient tous a pointeur GROSSIER et AU-DESSUS
+     de 560 px — 768x1024 et 844x390 — c'est-a-dire exactement la ou la regle ne
+     s'appliquait pas, avec 97 px d'en-tete mesures.
+     La separation de la feuille ne bouge pas : une fenetre etroite pilotee a la
+     SOURIS garde le rendu du bureau, rembourrage compris. */
+  .tb-top{padding-block:0}
+}
+
+/* ==========================================================================
+   15quater. LA FENETRE BASSE — une seule rangee, et le doigt garde ses 44 px
+   --------------------------------------------------------------------------
+   MESURE a 844x390 en pointeur grossier : l'en-tete faisait 89 px, soit 23 %
+   de la fenetre. Le plafond de 96 px n'etait pas en cause — c'est le RATIO qui
+   echouait, et il vaut 46,8 px ici (12 % de 390). Deux rangees de controles de
+   44 px ne tiennent pas sous 46,8 px ; une seule tient : 44 + 1 px de filet =
+   45 px = 11,5 %. Ce n'est pas une regression (l'en-tete y valait deja 21,8 %
+   avant ce chantier, avec des controles de 32 px) : c'est un defaut qui etait
+   la, et que la sonde mesure maintenant.
+
+   POURQUOI CES TROIS CONDITIONS, ET PAS `orientation: landscape`. La hauteur
+   est la SEULE contrainte qui echoue, donc c'est elle qui arme la regle :
+   `max-height:500px` (12 % de 500 = 60 px, une rangee de 45 px y passe large)
+   laisse hors du domaine les trois telephones en portrait et 768x1024, qui ne
+   doivent pas bouger. La largeur n'est pas une contrainte par defaut, c'est une
+   condition de POSSIBILITE, et elle se calcule :
+       bloc d'identite   26 (logo) + 16 + 210 (selecteur) + 8
+                         + 130 (place libre) + 8 + 45 (langue)   = 443 px
+       bande d'onglets   8 x 44 px + 7 ecarts de 1 px           = 359 px
+       colonne de lecture  2 x 24 px de marge, moins les 24 px que la bande
+                         rend par son bord droit                = +24 px
+   soit 826 px : la largeur EXACTE ou la rangee cesse de tenir. Mesure du seuil :
+   a 844 px la bande recoit 377 px (onglets de 46 px, au-dessus des 44) ; a
+   812 px elle est serree a 345 et DEFILE. La regle est donc armee a 840 px,
+   14 px au-dessus du seuil mesure, pour la meme raison que le palier de 780 px
+   (une autre police ou un autre facteur d'echelle deplace ces pixels-la).
+   SOUS 840 px, RIEN NE BOUGE : l'en-tete garde ses deux rangees, entieres,
+   plutot qu'une rangee qui ne tiendrait qu'en retirant un controle.
+
+   CE QUI EST RETIRE, ET RIEN D'AUTRE. Le verrou de marque perd son TEXTE et
+   garde son logo : « XBOX 360 LIBRARY MANAGER » vaut 197 px a lui seul, et
+   c'est deja ce que fait le palier 560 sur le meme appareil — ni le selecteur,
+   ni la place libre du disque, ni le bouton de langue, ni un seul des huit
+   onglets ne quitte l'ecran, et aucun n'est tronque. La bande d'onglets rend
+   son encoche DROITE (`margin-inline-end`) : c'est un element de bord, son bord
+   droit EST le bord de l'ecran, exactement le raisonnement de la regle de
+   560 px ou c'est l'encoche des deux cotes qui tombe. Le bord GAUCHE de la
+   rangee d'identite garde ses 24 px : c'est la colonne de lecture.
+   Les deux derniers reglages ne sont pas un gout : l'ecart de `.tb-right` passe
+   de 12 a 8 px et le bouton de langue reprend le rembourrage du palier 560
+   (`padding-inline:var(--sp-1)`, deja justifie pour un doigt). Ces 24 px font
+   passer le seuil de 850 a 826, donc SOUS les 844 px a corriger.
+   LES LIBELLES RESTENT DANS LE DOM (regle de 780 px) : huit noms demandent
+   782 px, la bande en offre 377, et les icones les remplacent — `display:flex`,
+   sans quoi la bande serait huit carres vides, c'est-a-dire huit onglets dont
+   plus rien ne dit ce qu'ils ouvrent. */
+@media (pointer: coarse) and (max-height: 500px) and (min-width: 840px){
+  #topbar{flex-direction:row;align-items:stretch}
+  /* La rangee d'identite ne se retrecit PAS : c'est la bande qui prend ce qui
+     reste. L'inverse couperait le selecteur de disque, et « selecteur tronque »
+     est un defaut mesure par la sonde. */
+  .tb-top{flex:0 0 auto}
+  .brand .bn,.brand .bs{display:none}
+  .tb-right{gap:var(--sp-2)}
+  #langBtn{padding-inline:var(--sp-1)}
+  .tb-tabs{flex:1 1 auto;gap:1px;margin-inline-end:calc(-1 * var(--sp-5))}
+  .ttab{flex:1 1 0;min-width:44px;padding-inline:0;gap:0}
+  .ttab .ni{display:flex}
+  .ttab .txt{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}
+
+@media (hover: none){
+  /* LE MENU DE LANGUES : IL S'OUVRE AU DOIGT, ET IL SE REFERME AU DOIGT.
+     Au survol il s'ouvre (`langwrap:hover`) ; au doigt, le navigateur pose
+     `:hover` sur l'element touche et ne le retire jamais, donc un menu ouvert
+     par un tap restait ouvert. Le survol est donc neutralise ici, comme la
+     classe `ouvert` que pose `basculeLang()` : rien ne la retire au doigt, et
+     un tap ailleurs ne la defait pas.
+     `:focus-within` reste alors le SEUL chemin, et c'est le bon : toucher le
+     bouton lui donne le focus, donc le menu s'ouvre ; toucher ailleurs le
+     retire, donc le menu se referme. C'est le seul mecanisme qui se referme
+     TOUT SEUL sans une ligne de JavaScript. Il n'est pas nouveau pour autant :
+     c'est deja celui de la manette, ou il n'y a pas de survol non plus — la
+     regle d'origine l'ecrit noir sur blanc. */
+  .langwrap:hover .langmenu,.langwrap.ouvert .langmenu{display:none}
+  .langwrap:focus-within .langmenu{display:block}
+  /* L'ACTION DE LIGNE DE LA CONSOLE reste a 45 % au repos et monte a 100 % au
+     survol. Elle reste DEVINABLE sans survol (c'est deja ecrit a sa regle),
+     mais au doigt rien ne la ferait jamais monter : on la tient a 100 %. */
+  .conrow .ca{opacity:1}
+}
+
+/* CONSOLE AU TELEPHONE : une ligne « nom + chemin + actions » ne tient plus
+   sur 316 px. Elle s'enroule : le chemin case les mots, les actions prennent
+   leur propre rangee a droite. */
+@media (max-width:560px){
+  .conrow{flex-wrap:wrap}
+  .conrow .cn,.conrow .ct{white-space:normal;overflow-wrap:anywhere;min-width:0}
+  .conrow .ca{flex:0 0 100%;justify-content:flex-end}
+}
+
+/* ==========================================================================
+   15ter. LA FICHE DU JEU — la colonne gauche de la surcouche de telechargement
+   --------------------------------------------------------------------------
+   Demande de l'utilisateur : « dans catalogue cliquer sur un jeu ouvre donc la
+   zone pour telecharger mais a gauche la jaquette du jeu avec explication et le
+   style du jeu ». La fiche est le PREMIER enfant de `.ov-body` ; les deux
+   `<h2 class="sec">` et les deux `<table class="tbl">` qui suivent, reunis dans
+   `.dlm-col`, passent a sa droite.
+
+   LE CORPS DEVIENT UNE GRILLE, ET LE CONTENU DE DROITE EST UN SEUL ELEMENT DE
+   CETTE GRILLE. Le seul changement de DOM est ce conteneur : la fiche reste le
+   premier enfant, les quatre blocs existants sont REUNIS dans le second, dans
+   leur ordre. Sous 900 px de fenetre les deux colonnes s'empilent, et c'est
+   l'ORDRE DU DOCUMENT qui remet les blocs dans le bon sens — la fiche y est deja
+   la premiere. Une media query ne peut pas reordonner un flux ; un
+   `flex-direction:column` le peut, et il n'y a rien d'autre a ecrire.
+
+   POURQUOI LES QUATRE BLOCS SONT REUNIS, ET PAS SEULEMENT « places en colonne 2 ».
+   La pose automatique d'une grille range ses elements PAR RANGEE. Avec la fiche
+   en colonne 1 et les quatre blocs en colonne 2, le titre « SOURCES » (28 px)
+   partageait donc la RANGEE 1 avec la fiche (547 px mesuree) et sa propre table
+   partait en rangee 2 : le titre flottait seul au-dessus du vide. Mesure a
+   1600x1000 : `dlmSec1.bas 237`, `dlmT1.y 732` — 495 px de colonne droite vide
+   la ou la marge d'un titre vaut 12. Le palier 899 ne le montre pas (les deux
+   colonnes y sont empilees) et une relecture geometrique ne le voit pas non plus,
+   parce que les LARGEURS etaient justes : c'est une RELATION qui etait fausse.
+
+   L'AUTRE FORME POSSIBLE — `.dlm-body>.fiche{grid-row:span 4}` — A ETE MESUREE
+   AVANT D'ETRE ECARTEE. Un element qui couvre plusieurs rangees leur REPARTIT
+   l'exces de sa propre hauteur : des que la colonne de contenu est plus basse que
+   la fiche — cas reel, `dlmSearch` masque FICHIERS a chaque recherche et une
+   recherche sans resultat ne laisse qu'une ligne — la fiche de 547 px etirait ses
+   quatre rangees et rouvrait le trou. Mesure, meme etat, avec le `span 4` :
+   74 px entre le premier titre et sa table, 73 px entre le second et la sienne,
+   au lieu de 12. Un conteneur, lui, laisse les quatre blocs dans le FLUX NORMAL :
+   un titre reste colle a sa table, quelle que soit la hauteur de la fiche.
+
+   `minmax(0,1fr)` sur la colonne de droite n'est pas un ornement : sans lui,
+   une cellule large (un nom de fichier d'archive.org, un TitleID) impose sa
+   largeur a la colonne et la grille deborde du panneau — le « ca depasse » que
+   la sonde mesure.
+
+   LES DEUX LARGEURS SONT MESUREES, PAS CHOISIES. Mesure a 1600x1000 : le
+   panneau fait 858 px, son corps 846 (clientWidth, qui compte les 14 px de
+   rembourrage de chaque cote), donc 818 px utiles. AVEC 240 px de fiche, la
+   table des FICHIERS n'avait plus que 566 px alors que son minimum mesure est
+   de 605 (« DEBORDE : ov-body dlm-body 871>846 ») : ses cellules portent des
+   largeurs en ligne (`width:80px`, `width:180px`) et sa derniere colonne deux
+   boutons en `white-space:nowrap`. 818 - 200 (fiche) - 12 (ecart) = 606 px :
+   la table tient, avec 1 px de marge, et c'est pour cela que 200 n'est pas
+   « une jolie valeur ronde ».
+   `@media (max-width:899px)` plus bas : 848 px de panneau sont necessaires
+   (200 + 12 + 605 + 2 de filets + 28 de rembourrage), soit 95 vw = 848 pour une
+   fenetre de 893 px. Sous ce seuil les deux colonnes ne tiennent plus ENSEMBLE :
+   elles s'empilent alors, fiche au-dessus — la meme transformation qu'au
+   telephone, et le meme ordre, puisqu'elle est deja la premiere du DOM.
+   ========================================================================== */
+.dlm-body{display:grid;grid-template-columns:200px minmax(0,1fr);gap:0 var(--sp-3);align-items:start}
+.dlm-body>.fiche{grid-column:1}
+/* LE CONTENU EST UN SEUL ELEMENT DE GRILLE. Les quatre blocs qui le composent ne
+   sont PAS nommes ici : ils ne sont plus des elements de la grille, ils sont dans
+   le flux normal de ce conteneur. `min-width:0` sur le conteneur fait le meme
+   travail que `minmax(0,1fr)` sur la colonne — sans lui, une cellule large
+   (un nom de fichier d'archive.org, un TitleID) elargit la colonne et la grille
+   deborde du panneau. */
+.dlm-body>.dlm-col{grid-column:2;min-width:0}
+
+.fiche{display:flex;flex-direction:column;gap:var(--sp-2);padding-top:var(--sp-4)}
+.fiche-tete{display:flex;gap:var(--sp-2);align-items:flex-start}
+/* LA BOITE A UNE TAILLE FIXE, ET C'EST ELLE QUI EMPECHE LE TROU. L'image la
+   remplit, le repli de jaquette cassee (`covErr`) y pose son bloc, et la boite
+   fait la meme largeur et la meme hauteur dans les trois cas : une jaquette
+   absente ne change donc RIEN a la mise en page. Un `onerror` ne se declenche
+   jamais dans une mesure — aucune sonde ne peut voir ce detail, d'ou le
+   garde-fou de `test/fiche-catalogue.test.js`.
+   88 x 118 : la vignette de la liste des jeux fait 30 x 40, celle de la fiche
+   d'un jeu 190 x 254. Dans une colonne de 200 px, il faut que la jaquette soit
+   reconnaissable ET que le nom du jeu tienne a cote d'elle. */
+.fiche-cov{width:88px;height:118px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;background:var(--fill-subtle);border:1px solid var(--stroke-secondary);border-radius:var(--r-control)}
+.fiche-img{width:100%;height:100%;object-fit:cover}
+.fiche-nm{font-size:var(--fs-body);font-weight:600;color:var(--text-1);line-height:1.35;
+  min-width:0;overflow-wrap:anywhere}
+/* UNE LIGNE = UN LIBELLE AU-DESSUS DE SA VALEUR. Dans 240 px, un libelle comme
+   « Jaquettes cataloguees » et un chemin comme `H:\Games\4D5307E6` cote a cote
+   ne laisseraient a aucun des deux la place de se lire ; empiles, les deux se
+   replient sur autant de lignes qu'il faut. */
+.fiche-r{padding:var(--sp-1) 0;border-bottom:1px solid var(--stroke-secondary)}
+.fiche-k{display:block;color:var(--text-3);font-size:var(--fs-caption);font-weight:600}
+.fiche-v{display:block;color:var(--text-1);font-size:var(--fs-caption);overflow-wrap:anywhere}
+.fiche-sub{display:block;color:var(--text-3);font-family:var(--mono);font-size:var(--fs-caption);overflow-wrap:anywhere}
+/* Le TitleID se copie : c'est le MEME geste que la colonne du catalogue, et le
+   seul element de la fiche qu'un doigt puisse toucher. */
+.fiche-tid{display:block;background:none;border:0;padding:0;cursor:pointer;text-align:left;
+  font-family:var(--mono);font-size:var(--fs-caption);color:var(--ac)}
+.fiche-tid:hover{text-decoration:underline}
+
+/* SOUS 900 px DE FENETRE, LA FICHE PASSE AU-DESSUS DU CONTENU. Ce n'est pas une
+   precaution de principe : c'est la mesure ci-dessus. Le panneau est plafonne a
+   `min(860px,95vw)`, donc sous 893 px de fenetre il ne fait plus les 848 px que
+   demandent 200 (fiche) + 12 (ecart) + 605 (le minimum mesure de la table des
+   fichiers) + 2 (filets) + 28 (rembourrage). Les garder cote a cote ferait
+   defiler tout le corps de la surcouche LATERALEMENT, ce qui est exactement le
+   defaut que la regle de 620 px du palier 560 corrige pour les tableaux.
+   Une media query ne peut pas REORDONNER un flux : elle n'a pas a le faire, la
+   fiche est deja la premiere du DOM. Un `flex-direction:column` suffit, et les
+   `grid-column` du bureau n'ont plus de sens dans un conteneur flex.
+   Le telephone (560) est couvert par cette regle-ci : la surcouche y est deja
+   une feuille pleine hauteur, et la fiche y est au-dessus du contenu depuis la
+   meme declaration. Rien a empiler a la main, aucune largeur en dur. */
+@media (max-width:899px){
+  .dlm-body{display:flex;flex-direction:column}
+}
+
+/* ==========================================================================
+   15 ASSISTANT LOCAL — la coquille de l'assistant
+   --------------------------------------------------------------------------
+   La coquille de l'assistant : le bouton du pied de page (et son jumeau de
+   l'accueil), le fil de la conversation, et la ligne de saisie. Le corps du
+   panneau est deja `.ov-body` (il defile, `flex:1`), l'en-tete `.ov-head`, et la
+   coque `.panel` : le palier 560 px en fait une feuille pleine hauteur sans une
+   ligne de plus.
+
+   POURQUOI LE BOUTON EST UN `div` ET NON UN `button` : il vit dans le pied de
+   page A COTE du mini-panneau de telechargement, qui est lui aussi un `div`
+   `role="button"` — c'est la meme famille de composant, et deux balises
+   differentes pour la meme chose finiraient par diverger. Il porte donc
+   `tabindex="0"`, et la cible de 44 px du doigt lui est donnee explicitement
+   plus bas : la regle tactile generale ne vise que `button`, `select`,
+   `textarea`, `label.checkline` et les `input`, pas les `div` a `tabindex`.
+
+   PAS DE PADDING PROPRE ICI. Le bouton n'a que l'ecart entre son icone et son
+   libelle, et la ligne de saisie s'en remet au rembourrage de base des champs :
+   ajouter un `5px 12px` ou un `8px 14px` de plus ferait une quatorzieme valeur de
+   rembourrage hors rampe pour deux elements qui n'en ont pas besoin. La largeur
+   de la question vient de `.grow` (flex:1), et elle ne peut pas deborder : un
+   enfant de flex a `min-width:0`, donc il se retrecit au lieu de pousser la page.
+   ========================================================================== */
+#iaModal>.panel{width:min(720px,94vw)}
+#iaBouton{display:flex;align-items:center;gap:6px;cursor:pointer}
+#iaBouton svg{fill:currentColor;pointer-events:none}
+#iaFil{max-height:46vh;overflow:auto}
+.ia-q{margin:8px 0 4px;font-weight:600}
+/* `pre-wrap` garde les retours a la ligne du modele, et `overflow-wrap:anywhere`
+   empeche une longue chaine sans espace (un chemin, un TitleID colle) de pousser
+   le panneau : c'est deja la protection de `.ck-code`. */
+.ia-r{white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 10px}
+.ia-note{color:var(--text-3);font-size:var(--fs-caption)}
+.ia-saisie{display:flex;gap:8px;align-items:center;margin-top:10px}
+/* Le survol d'un bouton discret lui donne `--fill-subtle` ; dans le pied de page,
+   pose sur la barre, c'est ce qui dit qu'il est cliquable. Le bouton du pied garde
+   donc l'encre secondaire de `button.btn.quiet` : rien a redefinir. */
+@media (pointer: coarse){
+  #iaBouton{min-height:44px;min-width:44px}
+  #iaEnvoyer{min-height:44px}
+}
+
+/* ==========================================================================
+   15ter. COQUILLE WPF — les trois boutons de legende (spec §4.4)
+   --------------------------------------------------------------------------
+   Ils n'existent QUE dans la coquille (`?shell=1`), ou la fenetre n'a pas de
+   barre de titre : c'est l'en-tete de l'application qui en tient lieu, et ces
+   trois boutons sont ceux de Windows. Le JS les DESSINE (la page ordinaire ne
+   porte donc pas trois boutons inertes) ; la feuille dit seulement a quoi ils
+   ressemblent et ou ils se rangent.
+   46 x 32 : les dimensions des boutons de legende de Windows 11, entre le
+   bouton de langue et le bord.
+   Mesure du 2026-09-21 : le `pointer: coarse` ne s'applique pas ici — une
+   coquille WPF est un bureau, et le mode `?shell=1` n'est jamais ouvert sur un
+   telephone. Les 32 px de haut n'ont donc pas a passer la barre des 44 px du
+   doigt, qui ne les verra jamais. */
+#shellBtns{display:none;gap:1px;margin-left:var(--sp-2)}
+body.shell #shellBtns{display:flex}
+#shellBtns button{width:46px;height:32px;border:0;border-radius:0;background:transparent;
+  color:var(--text-2);display:flex;align-items:center;justify-content:center;padding:0}
+#shellBtns button:hover{background:var(--fill-subtle);color:var(--text-1)}
+#shellBtns #shClose:hover{background:#c42b1c;color:#fff}
+/* L'EN-TETE EST LA ZONE DE DEPLACEMENT, ses controles NON : sans le `no-drag`,
+   cliquer un onglet ou le selecteur de disque deplacerait la fenetre. */
+body.shell #topbar{-webkit-app-region:drag}
+body.shell #topbar button,
+body.shell #topbar input,
+body.shell #topbar select,
+body.shell #topbar a,
+body.shell #topbar .seg,
+body.shell #shellBtns{-webkit-app-region:no-drag}
+
+/* 15quater. DEMARRAGE AUTOMATIQUE — n'existe que dans la coquille WPF
+   --------------------------------------------------------------------------
+   Une page web n'ecrit pas dans le registre de l'utilisateur : hors de la
+   coquille, la case serait inerte, donc elle est masquee et une note dit
+   pourquoi (`#autoNav`). Dans la coquille, c'est l'inverse : la case et son
+   etat, et pas de note. Aucun des deux etats n'est « vide » : chacun dit
+   quelque chose. */
+#autostart{display:none;flex:1 0 100%;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+body.shell #autostart{display:flex}
+#autoNav{display:inline}
+body.shell #autoNav{display:none}
+
+/* ==========================================================================
+   15ter. NXE — LE RAIL DES BLADES, L'ORBE ET LA LAQUE
+   --------------------------------------------------------------------------
+   La refonte visuelle : la navigation quitte l'en-tete pour une colonne de
+   LAMES a gauche, comme le dashboard de la console. Deux signatures :
+
+     - LA LAME ACTIVE est la plaque claire glossy qui depasse vers le contenu.
+       C'est LE geste NXE : le reste des lames reste sombre et se tait.
+     - L'ORBE en tete reproduit le bouton d'alimentation : sphere X entouree de
+       l'anneau lumineux a quatre segments, dont la couleur dit l'etat de la
+       console (vert = reliee, un quart rouge = absente).
+
+   `#topbar` ne porte plus que la rangee d'identite (marque, disque, langue) —
+   mesuree — et `#ctlbar` garde la barre d'etat. Sous 840 px, le rail se replie
+   en bande horizontale sous l'en-tete : `.tb-tabs`/`.ttab` gardent leurs noms
+   pour que toute la mesure du doigt continue de s'appliquer.
+   ========================================================================== */
+:root{--rail-w:80px}
+
+/* --- repli : la bande, sous la barre haute -------------------------------- */
+#blades{position:relative;z-index:3}
+.bl-head{display:none}
+/* Pied de rail : l'assistant, hors des cinq destinations (pas un .ttab) */
+.bl-foot{display:none}
+.bl-assist{display:flex;align-items:center;gap:8px;width:100%;
+  padding:4px 10px;border:0;border-radius:6px;background:transparent;
+  color:var(--text-3);font-family:var(--font);font-size:var(--fs-caption);
+  letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.bl-assist:hover{color:var(--text-1);background:#ffffff0c}
+.bl-assist:focus-visible{outline:2px solid var(--ac);outline-offset:-2px}
+/* Pastilles du rail : point d'etat Console, compteur Activite */
+.nvdot{width:8px;height:8px;border-radius:50%;background:var(--text-3);flex:none}
+.nvdot.ok{background:var(--ac)}
+.nvdot.partiel{background:var(--warn)}
+.nvdot.off{background:var(--text-3)}
+.nvbadge{min-width:18px;height:18px;border-radius:9px;padding:0 6px;
+  background:var(--ac);color:#0b1a0e;font-size:var(--fs-caption);font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;flex:none}
+.nvbadge[hidden]{display:none}
+/* Contexte de la vue, apres le sous-titre du bandeau de titre */
+.vctx{color:var(--text-3);font-size:var(--fs-caption);text-transform:uppercase;
+  letter-spacing:.08em;margin-inline-start:auto;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:40%}
+
+@media (max-width:839px){
+  #blades{
+    /* Pas de backdrop-filter : la bande est sous l'en-tete, qui l'a deja —
+       et la couche Mica derriere est deja floutee a 48 px. Re-flouter paie
+       une couche plein ecran pour un effet invisible (plafond mesure). */
+    background:var(--mica-alt);
+    border-bottom:1px solid var(--stroke-secondary);
+  }
+  /* Le `margin-inline:-24px` du palier 560 compensait le padding du haut de
+     `#topbar` ; le parent des onglets n'a plus ce padding, le retrait du ferait
+     deborder. */
+  #blades .tb-tabs{margin-inline:0}
+}
+
+/* --- le rail, a partir de 840 px ------------------------------------------ */
+@media (min-width:840px){
+  #blades{
+    position:fixed;inset:0 auto 0 0;width:var(--rail-w);
+    display:flex;flex-direction:column;z-index:4;
+    background:linear-gradient(180deg,#1a1e14 0%,#10130c 52%,#080a05 100%);
+    border-right:1px solid #ffffff12;
+  }
+  /* eclairage du haut, comme sur la coque blanche de la console */
+  #topbar,#wrap,#ctlbar{margin-left:var(--rail-w)}
+
+  /* L'orbe porte la marque des que le rail existe : repeter le logo et le nom
+     dans le bandeau faisait deux repères pour une seule application. Le
+     bandeau sert alors uniquement au contexte — disque, place libre, langue.
+     Sous 840 px il n'y a pas de rail, et la marque revient dans l'en-tete. */
+  #topbar .brand{display:none}
+
+  /* L'ORBE — le bouton d'alimentation : sphere X + anneau a quatre segments */
+  .bl-head{display:flex;flex-direction:column;align-items:center;gap:7px;
+    padding-block:22px 12px;padding-inline:8px;flex:0 0 auto}
+  .bl-orb{position:relative;width:56px;height:56px}
+  .bl-orb .rolring{position:absolute;inset:0;width:100%;height:100%}
+  .rol-seg{fill:none;stroke:#ffffff20;stroke-width:5;stroke-linecap:round;
+    transition:stroke var(--t-slow) var(--ease-decel)}
+  .bl-orb .xlogo{position:absolute;left:14px;top:14px;width:28px;height:28px;
+    filter:drop-shadow(0 0 10px var(--ac-glow))}
+  #orb.ok .rol-seg{stroke:var(--ac);filter:drop-shadow(0 0 5px #3ddc8480)}
+  /* Un seul canal vivant (XBDM sans FTP, ou l'inverse) : segments AMBRE —
+     le gris dirait « absente », le vert « reliee », aucun des deux n'est vrai. */
+  #orb.partiel .rol-seg{stroke:#e8b33d;filter:drop-shadow(0 0 5px #e8b33d80)}
+  /* Console absente : segments gris. Pas de rouge — une console eteinte ou
+     non reliee n'est pas une panne ; le rouge est reserve aux erreurs. */
+  #orb.off .rol-seg{stroke:#ffffff20}
+  /* Le rail fin n'a pas la place du mot ni du libelle d'etat : l'anneau de
+     l'orbe porte la couleur, le point voyage sur l'entree Console, et le titre
+     du document le nomme. `title` sur le bouton garde l'info au survol. */
+  .bl-word,.bl-state{display:none}
+
+  /* LES LAMES */
+  #blades .tb-tabs{
+    flex:1;flex-direction:column;align-items:stretch;gap:3px;
+    overflow-y:auto;overflow-x:hidden;padding-block:8px 12px;min-height:0;margin:0;
+  }
+  #blades .ttab{
+    position:relative;
+    flex:0 0 auto;min-width:0;height:56px;flex-direction:column;
+    justify-content:center;align-items:center;
+    gap:4px;padding-inline:2px;padding-block:6px;margin-right:6px;
+    background:transparent;border-radius:0;
+    color:var(--text-3);font-size:var(--fs-caption);letter-spacing:.07em;
+  }
+  #blades .ttab .ni{display:flex;opacity:.75}
+  #blades .ttab .ni svg{width:21px;height:21px}
+  #blades .ttab .txt{position:static;width:100%;height:auto;overflow:hidden;
+    clip-path:none;white-space:nowrap;text-overflow:ellipsis;text-align:center;
+    font-size:var(--fs-caption);letter-spacing:.02em;text-transform:uppercase;
+    flex:none}
+  /* Point d'etat et compteur en SURIMPRESSION de l'icone : en enfant flex ils
+     volaient une rangee a un onglet de 56 px et le libelle (flex-shrink)
+     etait ecrase a 0 — « Console » disparaissait quand la pastille s'allumait. */
+  #blades .nvdot{position:absolute;top:6px;right:8px}
+  #blades .nvbadge{position:absolute;top:3px;right:3px}
+  #blades .ttab:hover{background:#ffffff0c;color:var(--text-1)}
+  #blades .ttab.active{
+    /* LA SELECTION RESTE SOMBRE : la plaque claire glossy detonnait sur le
+       theme entier (mesure : un pave creme sur une colonne sombre). Le
+       glissement vers le contenu est conserve — c'est lui qui dit « lame » —
+       mais l'etat actif se lit maintenant par la barre d'accent a gauche,
+       langage Fluent (Settings, Terminal), pas par un changement de couleur
+       d'encre. Les 10 px de `margin-right` restent la reserve du translate. */
+    background:linear-gradient(90deg,#1a2413f2,#10160cf4);
+    color:var(--text-1);
+    border-radius:0 10px 10px 0;
+    transform:translateX(6px);
+    box-shadow:0 5px 18px #0000007d,0 0 0 1px #00000042;
+    text-shadow:none;
+  }
+  #blades .ttab.active .ni{color:var(--ac);opacity:1}
+  #blades .ttab.active .txt{font-weight:700}
+  #blades .ttab:focus-visible{outline-offset:-3px}
+  .bl-foot{display:block;margin-top:auto;padding-block:10px;padding-inline:6px;
+    border-top:1px solid #ffffff14}
+  .bl-assist{justify-content:center;padding-inline:0}
+  .bl-assist .txt{font-size:var(--fs-caption);letter-spacing:.08em;text-transform:uppercase}
+
+  /* rail compact : icones seules, l'orbe reduit */
+  @media (max-width:1139px){
+    :root{--rail-w:64px}
+    .bl-head{padding-block:16px 12px;padding-inline:6px}
+    .bl-orb{width:46px;height:46px}
+    .bl-orb .xlogo{left:12px;top:12px;width:22px;height:22px}
+    .bl-word,.bl-state{display:none}
+    #blades .ttab{height:52px;justify-content:center;padding-inline:0;margin-right:6px}
+    /* Le libelle sort de l'ecran mais RESTE dans l'arbre d'accessibilite :
+       `display:none` aurait laisse l'icone sans nom annonce (la meme
+       convention est deja utilisee pour la bande, lignes plus haut). */
+    #blades .ttab .txt{position:absolute;width:1px;height:1px;overflow:hidden;
+      clip-path:inset(50%);white-space:nowrap}
+    #blades .ttab.active{transform:translateX(6px)}
+    .bl-foot{padding:0 6px}
+    .bl-assist{justify-content:center;padding-inline:0}
+    .bl-assist .txt{position:absolute;width:1px;height:1px;overflow:hidden;
+      clip-path:inset(50%);white-space:nowrap}
+  }
+}
+
+/* --- MAT — le style retenu ------------------------------------------------
+   Plus de laque, plus de reflet en plafond : les surfaces sont plates, la
+   hierarchie se fait par les filets et les teintes, pas par le vernis.
+   `background-color` reste pose pour la mesure de contraste. */
+button.btn.accent{
+  background-color:var(--ac);
+  border-color:#0000001a;
+}
+.tbl tbody tr:hover{background-color:#3ddc8408}
+/* Le titre de vue gagne la lumiere douce du dash. */
+#vtName{text-shadow:0 2px 30px #0000007a}
+
+/* ==========================================================================
+   16. COLONNE DE LECTURE — DOIT RESTER LA DERNIERE REGLE
+   --------------------------------------------------------------------------
+   Cette regle a d'abord ete posee au milieu de la feuille, et elle n'a JAMAIS
+   fonctionne : les regles `padding:...` de #topbar et .view, declarees plus
+   bas, reinitialisent `padding-inline` (le raccourci ecrase les proprietes
+   qu'il couvre). Le contenu restait donc etire sur toute la largeur de la
+   fenetre.
+
+   Elle doit rester ici, apres toutes les declurations de padding. Les paliers de
+   fenetre etroite ci-dessus posent leur propre padding : c'est voulu, et la
+   valeur `max()` retombe de toute facon sur l'espacement normal des que la
+   fenetre fait moins de --w-max.
+   ========================================================================== */
+/* Colonne de lecture bornee et centree. On y arrive par le padding interieur
+   pour ne rien imposer aux enfants : une barre d'outils qui pousse ses filtres a
+   droite reste alignee sur les tableaux en dessous. */
+#topbar,#ctlbar,#vtitle,.view{padding-inline:max(var(--sp-5),calc((100% - var(--w-max)) / 2))}
+
+

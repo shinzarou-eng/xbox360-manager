@@ -1,0 +1,31 @@
+{
+  "name": "xbox360-manager",
+  "version": "1.4.0",
+  "description": "Le compagnon PC d'Aurora — gestionnaire de bibliothèque Xbox 360 : identification par TitleID, Title Updates associées au MediaID du disque, placement DLC, organisation sûre du dépôt, et pilotage de la console par FTP",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/run.js",
+    "check": "node --check server.js",
+    "doctor": "node scripts/doctor.js",
+    "dataset": "node scripts/build-tu-dataset.js",
+    "uicheck": "node scripts/uicheck.js",
+    "release": "powershell -File scripts/build-release.ps1"
+  },
+  "keywords": [
+    "xbox360",
+    "aurora",
+    "rgh",
+    "jtag",
+    "god",
+    "xbla",
+    "title-update",
+    "mediaid",
+    "iso2god"
+  ],
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  }
+}

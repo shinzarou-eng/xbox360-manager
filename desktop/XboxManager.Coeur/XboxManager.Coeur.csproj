@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- `net10.0-windows` et non `net10.0` : la bibliotheque porte aussi la
+         lecture du registre (demarrage automatique), disponible sans paquet
+         supplementaire sous cette cible. Elle ne prend AUCUNE dependance a WPF :
+         c'est ce qui rend sa logique testable sans fenetre. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>XboxManager.Coeur</RootNamespace>
+  </PropertyGroup>
+
+</Project>
