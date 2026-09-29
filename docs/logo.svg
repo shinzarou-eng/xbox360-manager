@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="xg-silver" cx="35%" cy="22%" r="90%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="45%" stop-color="#eeeeea"/>
+      <stop offset="80%" stop-color="#c9cdc5"/>
+      <stop offset="100%" stop-color="#afb5aa"/>
+    </radialGradient>
+  </defs>
+  <g fill="none" stroke="#7fc02e" stroke-width="4">
+    <path d="M35 5 A27 27 0 0 1 59 29"/>
+    <path d="M59 35 A27 27 0 0 1 35 59"/>
+    <path d="M29 59 A27 27 0 0 1 5 35"/>
+    <path d="M5 29 A27 27 0 0 1 29 5"/>
+  </g>
+  <circle cx="32" cy="32" r="21" fill="url(#xg-silver)" stroke="#ffffff80" stroke-width=".5"/>
+  <path d="M19 18 Q25 18 32 24 Q39 18 45 18 Q39 24 36 29 Q44 39 46 46 Q37 39 32 34 Q27 39 18 46 Q20 39 28 29 Q25 24 19 18" fill="#4b8518"/>
+</svg>

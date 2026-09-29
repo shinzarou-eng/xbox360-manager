@@ -1,20 +1,41 @@
 <div align="center">
 
+<img src="docs/logo.svg" width="96" height="96" alt="Xbox 360 Manager">
+
 # Xbox 360 Manager
 
-**The PC companion Aurora never had** — an Xbox 360 library manager.
+**The PC companion Aurora never had** — an Xbox 360 library manager for RGH/JTAG consoles.
 
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![Dependencies](https://img.shields.io/badge/Dependencies-0-blueviolet?style=for-the-badge)](package.json)
+[![CI](https://github.com/shinzarou-eng/xbox360-manager/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/Tests-712%20passing-brightgreen?style=for-the-badge)](../../actions/workflows/ci.yml)
 
-![Coverflow](docs/screen-bibliotheque.png)
+![Library](docs/screen-bibliotheque.png)
 
 </div>
 
 ---
+
+**In a sentence:** it reads what the console reads — TitleID, MediaID, content type — straight from the package headers, and puts every file where Aurora actually looks for it.
+
+## Contents
+
+- [Why this exists](#why-this-exists)
+- [Interface](#interface)
+- [Features](#features)
+- [Getting started](#getting-started)
+- [The console (FTP)](#the-console-ftp)
+- [Aurora scripts](#aurora-scripts)
+- [Configuration](#configuration)
+- [Managed content structure](#managed-content-structure)
+- [Principles](#principles)
+- [Tech stack](#tech-stack)
+- [Contributing](#contributing)
+- [Roadmap](#roadmap)
+- [Legal](#legal--disclaimer)
 
 ## Why this exists
 
@@ -23,51 +44,87 @@ Copying a game dump onto an RGH/JTAG console by hand is a guessing game. You dro
 Two details cause most of that:
 
 - **The console only reads DLC and Title Updates from `Content\<TID>\<type>`.** A game stored in the wrong tree simply does not exist as far as the dashboard is concerned.
-- **A Title Update is only active for the MediaID of the disc it was installed for.** Every TU carries a MediaID; the disc's MediaID lives in its XEX. Install a TU that matches a different disc and the game skips it, which is a common cause of "my DLC stopped working".
+- **A Title Update is only active for the MediaID of the disc it was installed for.** Every TU carries a MediaID; the disc's MediaID lives in its XEX. Install a TU that matches a different disc and the game skips it — a common cause of "my DLC stopped working".
 
 This tool reads the TitleID and content type from the package headers, reads the MediaID from the XEX, and puts every file where the console actually looks. It manages a library you already have; deciding what belongs in it stays your call.
 
-## What it looks like
+## Interface
 
-The shelf above is the library view: an Aurora-style coverflow, with the selected
-game's badges (format, TitleID, size, discs, available updates) and a title
-watermark behind it.
+<table>
+<tr>
+<td width="50%">
 
-**Home** — the state of your setup, and what is worth doing about it. Advices are actionable: a TU installed for the wrong disc, a leftover whose game is already installed, a cover that never downloaded.
+**Home** — the state of your setup, and what is worth doing about it. Advice is actionable: a TU installed for the wrong disc, a leftover whose game is already installed, a cover that never downloaded.
 
 ![Home](docs/screen-accueil.png)
 
-**DLC & TU** — every installed game, its disc MediaID, how many DLC it has, and whether its Title Update actually applies. A red `TU ✗` is a TU installed for another disc: the console ignores it, and the DLC stays locked. This is the single screen that shows why the whole thing exists.
+</td>
+<td width="50%">
+
+**DLC & TU** — a game's fiche shows its disc MediaID, its DLC, and whether its Title Update actually applies. A TU installed for another disc is ignored by the console — and the DLC stays locked.
 
 ![DLC and title updates](docs/screen-dlc-tu.png)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
 
 **Downloads** — a real queue with pause/resume, free-space checks, and per-source rules.
 
 ![Downloads](docs/screen-telechargements.png)
 
+</td>
+<td width="50%">
+
 **Console** — drive Aurora over FTP. Two panes: the console on one side, what your PC can send on the other.
 
 ![Console](docs/screen-console.png)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
 
 **DLC & updates** — searches archive.org and Vimm's Vault for a game's add-ons, scores them by whole word, and hides what does not belong to *that* game.
 
 ![DLC](docs/screen-dlc.png)
 
+</td>
+<td width="50%">
+
 **Catalogue** — the XboxUnity title database, the same one Aurora reads.
 
 ![Catalogue](docs/screen-catalogue.png)
 
-**Storage** — per-drive space measured for real, segmented by what fills it: games, console content, homebrew, the drop folder. FAT32 drives are flagged — the console reads them, but no file over 4 GB fits, so downloads are redirected before they fail. When a console is connected over XBDM, its own volumes are measured the same way.
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Storage** — per-drive space measured for real, segmented by what fills it. FAT32 drives are flagged: the console reads them, but no file over 4 GB fits. A connected console's volumes are measured the same way over XBDM.
 
 ![Storage](docs/screen-stockage.png)
+
+</td>
+<td width="50%">
 
 **Aurora scripts** — LUA filters, sorts, subtitles and utilities from the official XboxUnity repositories, installed straight to the console.
 
 ![Scripts](docs/screen-scripts.png)
 
+</td>
+</tr>
+<tr>
+<td colspan="2">
+
 **List view** — the same library, dense, for when you are looking for one title.
 
 ![List](docs/screen-liste.png)
+
+</td>
+</tr>
+</table>
 
 ## Features
 
@@ -101,6 +158,10 @@ npm start          # then open http://localhost:4360
 
 No `npm install` — the project has no dependencies.
 
+`npm run doctor` is the first command on purpose. A missing external tool or an unplugged drive produces a vague failure later; the doctor turns them into an explicit list, and tells you whether each one blocks startup or only disables a feature.
+
+Open **http://localhost:4360**, go to the **FOLDERS** tab and set your paths. The app scans the configured drop folder and library folders from there.
+
 **Prefer a real window?** `desktop/` builds a Windows shell (WPF + WebView2) that
 hosts this same interface and **finds or starts** the server itself:
 
@@ -112,10 +173,6 @@ powershell -ExecutionPolicy Bypass -File desktop\Installer.ps1   # Start-menu sh
 Nothing is copied: the shortcut points at the executable where it is built, so your
 data (`config.json`, `secrets.json`, `covers\`, `dl\`) stays next to the code. Node
 must be installed. See `desktop/README.md`.
-
-`npm run doctor` is the first command on purpose. A missing external tool or an unplugged drive produces a vague failure later; the doctor turns them into an explicit list, and tells you whether each one blocks startup or only disables a feature.
-
-Open **http://localhost:4360**, go to the **FOLDERS** tab and set your paths. The app scans the configured drop folder and library folders from there.
 
 ### Optional external tools
 
@@ -156,7 +213,6 @@ Sorts           -> Game:\User\Scripts\Content\Sorts\
 ```
 
 A file dropped in a PC folder does nothing for Aurora, so when a console is connected the script is sent straight there. Only URLs under `xboxunity.net/as/` are accepted, and the category comes from the server's own list — never from the client.
-
 
 ## Configuration
 
@@ -230,7 +286,7 @@ Node.js **>= 18** with the standard library only — no runtime dependencies, no
 | `lib/platform.js` | Drive enumeration, filesystem types, Xbox drive recognition |
 | `lib/fsutil.js` | `movePath`, `walkFiles`, `dirSize` and other file helpers |
 | `lib/doctor.js` | Environment checks shared by the CLI and `GET /api/doctor` |
-| `public/index.html` | The whole interface: vanilla SPA, French and English |
+| `public/index.html` | The whole interface: vanilla SPA in four languages |
 | `scripts/uicheck.js` | Render probe: measures the real layout in a browser and reports defects |
 | `scripts/captures.ps1` | Takes the screenshots in this README |
 | `test/` | Unit tests, plus `test/e2e.ps1` for the sort pipeline end to end |
