@@ -47,10 +47,14 @@ xbox_*.ps1
 shot*.ps1
 test_ftp.js
 
-# AGENTS.md N'EST PLUS IGNORE. Il porte la section « Agent skills » qui pointe vers
-# docs/agents/ : sans lui, ces trois fichiers arrivent dans un clone sans que rien
-# ne dise de les lire. Verifie avant publication : aucune IP, aucun chemin
-# personnel, aucune valeur de secrets.json.
+# documents de travail internes : ils vivent sur la machine du projet, jamais
+# dans le depot public. Les tests qui les lisent sautent proprement sur un clone.
+AGENTS.md
+FUTUR.md
+REFONTE_COMPLETE.md
+docs/PUBLICATION.md
+docs/agents/
+docs/research/
 hb_index.json
 as_index.json
 mediaid.json
